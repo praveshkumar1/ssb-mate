@@ -1,0 +1,161 @@
+import { getDatabase } from '../database/connection';
+import { Coach, CoachFilters, PaginatedResponse } from '../types';
+import { logger } from '../utils/logger';
+
+export class CoachService {
+  private db = getDatabase;
+
+  async getVerifiedCoaches(): Promise<Coach[]> {
+    try {
+      // For now, return mock data until database is set up
+      const mockCoaches: Coach[] = [
+        {
+          id: '1',
+          email: 'john.doe@example.com',
+          firstName: 'John',
+          lastName: 'Doe',
+          phoneNumber: '+1-555-0123',
+          role: 'coach' as any,
+          isActive: true,
+          isVerified: true,
+          createdAt: new Date('2024-01-15'),
+          updatedAt: new Date('2024-01-15'),
+          bio: 'Experienced basketball coach with 10+ years of training athletes at all levels.',
+          experience: 10,
+          specializations: ['Basketball', 'Athletic Training', 'Youth Development'],
+          certifications: ['USA Basketball Certified', 'CPR Certified'],
+          hourlyRate: 75,
+          location: 'New York, NY',
+          availableTimeSlots: [],
+          rating: 4.8,
+          totalReviews: 24,
+          sportsPlayed: ['Basketball', 'Football'],
+        },
+        {
+          id: '2',
+          email: 'sarah.smith@example.com',
+          firstName: 'Sarah',
+          lastName: 'Smith',
+          role: 'coach' as any,
+          isActive: true,
+          isVerified: true,
+          createdAt: new Date('2024-01-10'),
+          updatedAt: new Date('2024-01-10'),
+          bio: 'Professional tennis coach specializing in technique improvement and mental game.',
+          experience: 8,
+          specializations: ['Tennis', 'Mental Coaching', 'Tournament Preparation'],
+          certifications: ['USPTA Certified', 'Mental Performance Certified'],
+          hourlyRate: 85,
+          location: 'Los Angeles, CA',
+          availableTimeSlots: [],
+          rating: 4.9,
+          totalReviews: 18,
+          sportsPlayed: ['Tennis'],
+        },
+        {
+          id: '3',
+          email: 'mike.johnson@example.com',
+          firstName: 'Mike',
+          lastName: 'Johnson',
+          role: 'coach' as any,
+          isActive: true,
+          isVerified: true,
+          createdAt: new Date('2024-01-05'),
+          updatedAt: new Date('2024-01-05'),
+          bio: 'Former professional soccer player turned coach, focusing on skill development.',
+          experience: 12,
+          specializations: ['Soccer', 'Skill Development', 'Team Strategy'],
+          certifications: ['UEFA B License', 'US Soccer National License'],
+          hourlyRate: 90,
+          location: 'Chicago, IL',
+          availableTimeSlots: [],
+          rating: 4.7,
+          totalReviews: 31,
+          sportsPlayed: ['Soccer', 'Football'],
+        }
+      ];
+
+      logger.info(`Returning ${mockCoaches.length} verified coaches`);
+      return mockCoaches;
+    } catch (error) {
+      logger.error('Error fetching verified coaches:', error);
+      throw error;
+    }
+  }
+
+  async getCoachById(id: string): Promise<Coach | null> {
+    try {
+      // Mock implementation - get from the verified coaches for now
+      const coaches = await this.getVerifiedCoaches();
+      const coach = coaches.find(c => c.id === id);
+      
+      logger.info(`Fetching coach with ID: ${id}, found: ${!!coach}`);
+      return coach || null;
+    } catch (error) {
+      logger.error('Error fetching coach by ID:', error);
+      throw error;
+    }
+  }
+
+  async getCoaches(filters: CoachFilters): Promise<PaginatedResponse<Coach>> {
+    try {
+      let coaches = await this.getVerifiedCoaches();
+      
+      // Apply filters
+      if (filters.verified !== undefined) {
+        coaches = coaches.filter(coach => coach.isVerified === filters.verified);
+      }
+      
+      if (filters.sport) {
+        coaches = coaches.filter(coach => 
+          coach.sportsPlayed.some(sport => 
+            sport.toLowerCase().includes(filters.sport!.toLowerCase())
+          )
+        );
+      }
+      
+      if (filters.location) {
+        coaches = coaches.filter(coach => 
+          coach.location.toLowerCase().includes(filters.location!.toLowerCase())
+        );
+      }
+      
+      if (filters.minRating) {
+        coaches = coaches.filter(coach => coach.rating >= filters.minRating!);
+      }
+      
+      if (filters.maxHourlyRate) {
+        coaches = coaches.filter(coach => 
+          coach.hourlyRate ? coach.hourlyRate <= filters.maxHourlyRate! : true
+        );
+      }
+
+      // Pagination
+      const page = filters.page || 1;
+      const limit = filters.limit || 10;
+      const startIndex = (page - 1) * limit;
+      const endIndex = startIndex + limit;
+      
+      const paginatedCoaches = coaches.slice(startIndex, endIndex);
+      const total = coaches.length;
+      const totalPages = Math.ceil(total / limit);
+      
+      logger.info(`Returning ${paginatedCoaches.length} coaches (page ${page} of ${totalPages})`);
+      
+      return {
+        data: paginatedCoaches,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages,
+          hasNext: page < totalPages,
+          hasPrevious: page > 1
+        }
+      };
+    } catch (error) {
+      logger.error('Error fetching coaches:', error);
+      throw error;
+    }
+  }
+}
