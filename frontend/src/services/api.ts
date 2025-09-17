@@ -1,5 +1,5 @@
 // API Configuration
-const API_BASE_URL = 'http://localhost:8080/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 
 // API Client class
 class ApiClient {
@@ -13,9 +13,13 @@ class ApiClient {
   async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
     
+    // Get auth token if available
+    const token = localStorage.getItem('token');
+    
     const config: RequestInit = {
       headers: {
         'Content-Type': 'application/json',
+        ...(token && { Authorization: `Bearer ${token}` }),
         ...options.headers,
       },
       ...options,
@@ -24,11 +28,14 @@ class ApiClient {
     try {
       const response = await fetch(url, config);
       
+      const data = await response.json();
+      
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error(data.error || data.message || `HTTP error! status: ${response.status}`);
       }
       
-      return await response.json();
+      // Return the data from the response for successful requests
+      return data.data !== undefined ? data.data : data;
     } catch (error) {
       console.error('API request failed:', error);
       throw error;

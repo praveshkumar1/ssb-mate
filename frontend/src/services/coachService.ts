@@ -13,28 +13,33 @@ export const coachService = {
   },
 
   // Get coach by ID
-  getCoachById: (id: number): Promise<Coach> => {
+  getCoachById: (id: string): Promise<Coach> => {
     return apiClient.get<Coach>(`/coaches/${id}`);
   },
 
-  // Search coaches by specialty
-  searchCoachesBySpecialty: (specialty: string): Promise<Coach[]> => {
-    return apiClient.get<Coach[]>(`/coaches/search?specialty=${encodeURIComponent(specialty)}`);
+  // Search coaches
+  searchCoaches: (params: {
+    specialization?: string;
+    minRating?: number;
+    location?: string;
+    experience?: string;
+    query?: string;
+  }): Promise<Coach[]> => {
+    const searchParams = new URLSearchParams();
+    
+    if (params.specialization) searchParams.append('specialization', params.specialization);
+    if (params.minRating) searchParams.append('minRating', params.minRating.toString());
+    if (params.location) searchParams.append('location', params.location);
+    if (params.experience) searchParams.append('experience', params.experience);
+    if (params.query) searchParams.append('query', params.query);
+    
+    return apiClient.get<Coach[]>(`/coaches/search?${searchParams.toString()}`);
   },
 
-  // Create new coach
-  createCoach: (coach: Partial<Coach>): Promise<Coach> => {
-    return apiClient.post<Coach>('/coaches', coach);
-  },
-
-  // Update coach
-  updateCoach: (id: number, coach: Partial<Coach>): Promise<Coach> => {
-    return apiClient.put<Coach>(`/coaches/${id}`, coach);
-  },
-
-  // Delete coach
-  deleteCoach: (id: number): Promise<void> => {
-    return apiClient.delete<void>(`/coaches/${id}`);
+  // Get top rated coaches
+  getTopRatedCoaches: (limit?: number): Promise<Coach[]> => {
+    const params = limit ? `?limit=${limit}` : '';
+    return apiClient.get<Coach[]>(`/coaches/top-rated${params}`);
   },
 };
 

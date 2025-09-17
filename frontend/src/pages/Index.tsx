@@ -1,10 +1,10 @@
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import HeroSection from "@/components/sections/HeroSection";
-import FeaturedCoaches from "@/components/sections/FeaturedCoachesNew";
+import FeaturedCoaches from "@/components/sections/FeaturedCoachesUpdated";
 import HowItWorks from "@/components/sections/HowItWorks";
 import BlogSection from "@/components/sections/BlogSection";
-import BackendTester from "@/components/BackendTester";
+import BackendTester from "@/components/BackendTesterNew";
 
 const Index = () => {
   return (

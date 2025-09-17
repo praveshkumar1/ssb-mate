@@ -1,0 +1,850 @@
+{
+	"info": {
+		"_postman_id": "ssb-connect-api-collection",
+		"name": "SSB Connect API Collection",
+		"description": "Complete API collection for SSB Connect mentoring platform",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "ssb-connect"
+	},
+	"item": [
+		{
+			"name": "🏠 Root & Health",
+			"item": [
+				{
+					"name": "Root API Info",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api"
+							]
+						}
+					}
+				},
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/health",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"health"
+							]
+						}
+					}
+				},
+				{
+					"name": "Test Hello Endpoint",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{api_url}}/test/hello",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"test",
+								"hello"
+							]
+						}
+					}
+				},
+				{
+					"name": "Seed Test Data",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{api_url}}/test/seed",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"test",
+								"seed"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "🔐 Authentication",
+			"item": [
+				{
+					"name": "Register Mentee",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    if (response.data && response.data.token) {",
+									"        pm.environment.set('jwt_token', response.data.token);",
+									"        pm.environment.set('user_id', response.data.user._id);",
+									"        console.log('JWT Token saved to environment');",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"john.doe@example.com\",\n    \"password\": \"securepassword123\",\n    \"firstName\": \"John\",\n    \"lastName\": \"Doe\",\n    \"role\": \"mentee\",\n    \"phoneNumber\": \"+1234567890\",\n    \"bio\": \"Aspiring SSB candidate looking for guidance\"\n}"
+						},
+						"url": {
+							"raw": "{{api_url}}/auth/register",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"auth",
+								"register"
+							]
+						}
+					}
+				},
+				{
+					"name": "Register Mentor",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    if (response.data && response.data.token) {",
+									"        pm.environment.set('mentor_token', response.data.token);",
+									"        pm.environment.set('mentor_id', response.data.user._id);",
+									"        console.log('Mentor JWT Token saved to environment');",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"mentor@example.com\",\n    \"password\": \"mentorpass123\",\n    \"firstName\": \"Sarah\",\n    \"lastName\": \"Wilson\",\n    \"role\": \"mentor\",\n    \"phoneNumber\": \"+1987654321\",\n    \"bio\": \"Former Army Officer, SSB expert with 10+ years experience\",\n    \"specializations\": [\"Leadership\", \"Group Discussion\", \"Personal Interview\"],\n    \"experience\": \"10+ years\",\n    \"achievements\": [\"Selected through SSB in first attempt\", \"Trained 500+ candidates\"]\n}"
+						},
+						"url": {
+							"raw": "{{api_url}}/auth/register",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"auth",
+								"register"
+							]
+						}
+					}
+				},
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.data && response.data.token) {",
+									"        pm.environment.set('jwt_token', response.data.token);",
+									"        pm.environment.set('user_id', response.data.user._id);",
+									"        console.log('JWT Token saved to environment');",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"john.doe@example.com\",\n    \"password\": \"securepassword123\"\n}"
+						},
+						"url": {
+							"raw": "{{api_url}}/auth/login",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"auth",
+								"login"
+							]
+						}
+					}
+				},
+				{
+					"name": "Forgot Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"john.doe@example.com\"\n}"
+						},
+						"url": {
+							"raw": "{{api_url}}/auth/forgot-password",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"auth",
+								"forgot-password"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "👨‍🏫 Coaches",
+			"item": [
+				{
+					"name": "Get Verified Coaches",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{api_url}}/coaches/verified",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"coaches",
+								"verified"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get All Coaches",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{api_url}}/coaches",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"coaches"
+							]
+						}
+					}
+				},
+				{
+					"name": "Search Coaches with Filters",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{api_url}}/coaches?specialization=Leadership&experience=5+ years&location=Delhi",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"coaches"
+							],
+							"query": [
+								{
+									"key": "specialization",
+									"value": "Leadership"
+								},
+								{
+									"key": "experience",
+									"value": "5+ years"
+								},
+								{
+									"key": "location",
+									"value": "Delhi"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Search Coaches by Text",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{api_url}}/coaches/search?q=Army Officer",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"coaches",
+								"search"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "Army Officer"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "👤 Users",
+			"item": [
+				{
+					"name": "Get User Profile",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{api_url}}/users/profile",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"users",
+								"profile"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get All Users",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{api_url}}/users",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"users"
+							]
+						}
+					}
+				},
+				{
+					"name": "Update User Profile",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"firstName\": \"John Updated\",\n    \"lastName\": \"Doe Updated\",\n    \"bio\": \"Updated bio with more details about my SSB preparation journey\",\n    \"phoneNumber\": \"+1234567891\"\n}"
+						},
+						"url": {
+							"raw": "{{api_url}}/users/profile",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"users",
+								"profile"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "📅 Sessions",
+			"item": [
+				{
+					"name": "Get All Sessions",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{api_url}}/sessions",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"sessions"
+							]
+						}
+					}
+				},
+				{
+					"name": "Create New Session",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    if (response.data && response.data._id) {",
+									"        pm.environment.set('session_id', response.data._id);",
+									"        console.log('Session ID saved to environment');",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"title\": \"Personal Interview Preparation\",\n    \"description\": \"One-on-one session for PI preparation with focus on communication skills\",\n    \"mentorId\": \"{{mentor_id}}\",\n    \"sessionType\": \"personal_interview\",\n    \"duration\": 60,\n    \"scheduledAt\": \"2025-09-25T10:00:00.000Z\",\n    \"meetingLink\": \"https://meet.google.com/abc-defg-hij\"\n}"
+						},
+						"url": {
+							"raw": "{{api_url}}/sessions",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"sessions"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Session by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{api_url}}/sessions/{{session_id}}",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"sessions",
+								"{{session_id}}"
+							]
+						}
+					}
+				},
+				{
+					"name": "Update Session",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"status\": \"completed\",\n    \"feedback\": \"Excellent session! Got great insights on handling stress during interviews. Mentor provided practical tips and real scenarios.\",\n    \"rating\": 5\n}"
+						},
+						"url": {
+							"raw": "{{api_url}}/sessions/{{session_id}}",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"sessions",
+								"{{session_id}}"
+							]
+						}
+					}
+				},
+				{
+					"name": "Delete Session",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{api_url}}/sessions/{{session_id}}",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"sessions",
+								"{{session_id}}"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "📚 Resources",
+			"item": [
+				{
+					"name": "Get All Resources",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{api_url}}/resources",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"resources"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Resources by Type",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{api_url}}/resources?type=study_material",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"resources"
+							],
+							"query": [
+								{
+									"key": "type",
+									"value": "study_material"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Create New Resource",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    if (response.data && response.data._id) {",
+									"        pm.environment.set('resource_id', response.data._id);",
+									"        console.log('Resource ID saved to environment');",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"title\": \"SSB Interview Guide 2025\",\n    \"description\": \"Comprehensive guide covering all aspects of SSB interviews including psychological tests, group tasks, and personal interviews\",\n    \"type\": \"study_material\",\n    \"category\": \"interview_preparation\",\n    \"url\": \"https://example.com/ssb-guide-2025.pdf\",\n    \"tags\": [\"SSB\", \"interview\", \"preparation\", \"guide\", \"psychology\"],\n    \"difficulty\": \"intermediate\"\n}"
+						},
+						"url": {
+							"raw": "{{api_url}}/resources",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"resources"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Resource by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{api_url}}/resources/{{resource_id}}",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"resources",
+								"{{resource_id}}"
+							]
+						}
+					}
+				},
+				{
+					"name": "Update Resource",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"title\": \"Updated SSB Interview Guide 2025 - Advanced Edition\",\n    \"description\": \"Updated comprehensive guide with latest patterns and advanced strategies for SSB interviews\",\n    \"difficulty\": \"advanced\"\n}"
+						},
+						"url": {
+							"raw": "{{api_url}}/resources/{{resource_id}}",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"resources",
+								"{{resource_id}}"
+							]
+						}
+					}
+				},
+				{
+					"name": "Delete Resource",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{api_url}}/resources/{{resource_id}}",
+							"host": [
+								"{{api_url}}"
+							],
+							"path": [
+								"resources",
+								"{{resource_id}}"
+							]
+						}
+					}
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Auto-set base URL if not in environment",
+					"if (!pm.environment.get('base_url')) {",
+					"    pm.environment.set('base_url', 'http://localhost:8080');",
+					"}",
+					"if (!pm.environment.get('api_url')) {",
+					"    pm.environment.set('api_url', 'http://localhost:8080/api');",
+					"}"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Global test to log response",
+					"console.log('Response Status:', pm.response.code);",
+					"console.log('Response Time:', pm.response.responseTime + 'ms');",
+					"",
+					"// Test for successful responses",
+					"pm.test('Response status code is successful', function () {",
+					"    pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+					"});",
+					"",
+					"// Test for response structure",
+					"if (pm.response.code === 200 || pm.response.code === 201) {",
+					"    pm.test('Response has success field', function () {",
+					"        const jsonData = pm.response.json();",
+					"        pm.expect(jsonData).to.have.property('success');",
+					"    });",
+					"}"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8080",
+			"type": "string"
+		},
+		{
+			"key": "api_url",
+			"value": "http://localhost:8080/api",
+			"type": "string"
+		}
+	]
+}

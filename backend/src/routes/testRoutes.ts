@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { logger } from '../utils/logger';
+import { seedDatabase } from '../database/seed';
 
 const router = Router();
 
@@ -39,6 +40,27 @@ router.get('/health', (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       error: 'Health check failed'
+    });
+  }
+});
+
+// POST /api/test/seed - Seed database with test data
+router.post('/seed', async (req: Request, res: Response) => {
+  try {
+    logger.info('Seeding database with test data');
+    
+    await seedDatabase();
+    
+    res.json({
+      success: true,
+      message: 'Database seeded successfully with test data',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    logger.error('Error seeding database:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to seed database'
     });
   }
 });

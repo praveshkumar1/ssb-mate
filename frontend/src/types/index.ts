@@ -1,55 +1,61 @@
 export interface User {
-  id: number;
-  username: string;
+  id: string;
+  name: string;
   email: string;
-  firstName?: string;
-  lastName?: string;
+  role: 'mentor' | 'mentee' | 'admin';
   bio?: string;
   profileImageUrl?: string;
+  phone?: string;
+  location?: string;
+  experience?: 'entry_level' | 'experienced' | 'senior' | number;
+  experienceLevel?: 'entry_level' | 'experienced' | 'senior';
+  specializations: string[];
+  certifications: string[];
+  rating: number;
+  totalReviews: number;
+  hourlyRate?: number;
+  availability?: string[];
+  isVerified: boolean;
+  isActive: boolean;
   createdAt: string;
   updatedAt: string;
-  roles: Role[];
+  // Backend compatibility fields
+  firstName?: string;
+  lastName?: string;
 }
 
+export interface Coach extends User {
+  role: 'mentor';
+}
+
+// Keep the old Role interface for backward compatibility
 export interface Role {
   id: number;
   name: string;
 }
 
-export interface Coach {
-  id: number;
-  user: User;
-  specialty: string;
-  experience?: string;
-  hourlyRate?: number;
-  availability?: string;
-  rating?: number;
-  totalReviews?: number;
-  isVerified: boolean;
-  createdAt: string;
-  updatedAt: string;
-  certifications?: string[];
-}
-
 export interface LoginRequest {
-  username: string;
+  email: string;
   password: string;
 }
 
 export interface SignupRequest {
-  username: string;
+  name: string;
   email: string;
   password: string;
-  role?: string[];
+  role?: 'mentor' | 'mentee';
 }
 
 export interface JwtResponse {
+  success: boolean;
   token: string;
-  type: string;
-  id: number;
-  username: string;
-  email: string;
-  roles: string[];
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+  };
+  timestamp: string;
 }
 
 export interface MessageResponse {
@@ -57,7 +63,10 @@ export interface MessageResponse {
 }
 
 export interface ApiResponse<T> {
+  success: boolean;
   data?: T;
   message?: string;
-  status: string;
+  error?: string;
+  count?: number;
+  timestamp: string;
 }

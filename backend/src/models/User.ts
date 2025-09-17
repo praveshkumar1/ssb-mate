@@ -133,6 +133,28 @@ const UserSchema: Schema = new Schema({
       delete ret._id;
       delete ret.__v;
       delete ret.password; // Never return password in JSON
+      
+      // Create name field from firstName and lastName for frontend compatibility
+      if (ret.firstName || ret.lastName) {
+        ret.name = `${ret.firstName || ''} ${ret.lastName || ''}`.trim();
+      }
+      
+      // Add profileImageUrl for frontend compatibility if not present
+      if (!ret.profileImageUrl) {
+        ret.profileImageUrl = '/placeholder.svg';
+      }
+      
+      // Map experience number to experience level string for frontend compatibility
+      if (typeof ret.experience === 'number') {
+        if (ret.experience >= 10) {
+          ret.experienceLevel = 'senior';
+        } else if (ret.experience >= 5) {
+          ret.experienceLevel = 'experienced';
+        } else {
+          ret.experienceLevel = 'entry_level';
+        }
+      }
+      
       return ret;
     }
   }
