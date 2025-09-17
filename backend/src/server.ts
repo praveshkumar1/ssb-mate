@@ -15,8 +15,8 @@ import testRoutes from './routes/testRoutes';
 import coachRoutes from './routes/coachRoutes'
 import userRoutes from './routes/userRoutes';
 import authRoutes from './routes/authRoutes';
-import sessionRoutes from './routes/sessionRoutesNew';
-import resourceRoutes from './routes/resourceRoutesNew';
+import sessionRoutes from './routes/sessionRoutes';
+import resourceRoutes from './routes/resourceRoutes';
 
 // Load environment variables
 dotenv.config();
@@ -42,6 +42,7 @@ app.use(limiter);
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:8081',
+  'http://localhost:8082',
   'http://localhost:3000',
   process.env.CORS_ORIGIN
 ].filter(Boolean);
