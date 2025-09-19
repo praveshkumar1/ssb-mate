@@ -7,6 +7,7 @@ import dotenv from 'dotenv';
 import { logger } from './utils/logger';
 import { errorHandler } from './middleware/errorHandler';
 import { notFoundHandler } from './middleware/notFoundHandler';
+import { requestLogger, errorLogger } from './middleware/requestLogger';
 import { connectDatabase } from './database/connection';
 import { seedDatabase } from './database/seed';
 
@@ -65,6 +66,9 @@ app.use(cors({
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Request logging middleware
+app.use(requestLogger);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -138,6 +142,9 @@ app.use('/api/resources', resourceRoutes);
 
 // 404 handler
 app.use(notFoundHandler);
+
+// Error logging middleware
+app.use(errorLogger);
 
 // Error handling middleware
 app.use(errorHandler);

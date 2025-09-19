@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { logger } from '../utils/logger';
+import { logger, apiLogger } from '../utils/logger';
 import User from '../models/User';
 
 const router = Router();
@@ -7,13 +7,25 @@ const router = Router();
 // GET /api/coaches/verified - Get all verified coaches
 router.get('/verified', async (req: Request, res: Response) => {
   try {
-    logger.info('Getting verified coaches');
+    const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
+    
+    apiLogger.info('Fetching verified coaches list', {
+      endpoint: '/api/coaches/verified',
+      ip: clientIP,
+      userAgent: req.get('User-Agent')
+    });
     
     const coaches = await User.find({ 
       role: 'mentor',
       isVerified: true,
       isActive: true 
     }).select('-password').sort({ rating: -1, totalReviews: -1 });
+    
+    apiLogger.info(`Successfully retrieved ${coaches.length} verified coaches`, {
+      endpoint: '/api/coaches/verified',
+      count: coaches.length,
+      ip: clientIP
+    });
     
     return res.json({
       success: true,
@@ -22,7 +34,15 @@ router.get('/verified', async (req: Request, res: Response) => {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    logger.error('Error getting verified coaches:', error);
+    const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
+    
+    apiLogger.error('Error fetching verified coaches', {
+      endpoint: '/api/coaches/verified',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      ip: clientIP,
+      userAgent: req.get('User-Agent')
+    });
+    
     return res.status(500).json({
       success: false,
       error: 'Failed to fetch verified coaches'
@@ -34,7 +54,14 @@ router.get('/verified', async (req: Request, res: Response) => {
 router.get('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    logger.info(`Getting coach with ID: ${id}`);
+    const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
+    
+    apiLogger.info(`Fetching coach profile by ID`, {
+      endpoint: `/api/coaches/${id}`,
+      coachId: id,
+      ip: clientIP,
+      userAgent: req.get('User-Agent')
+    });
     
     const coach = await User.findOne({
       _id: id,
@@ -43,11 +70,24 @@ router.get('/:id', async (req: Request, res: Response) => {
     }).select('-password');
     
     if (!coach) {
+      apiLogger.warn(`Coach not found`, {
+        endpoint: `/api/coaches/${id}`,
+        coachId: id,
+        ip: clientIP
+      });
+      
       return res.status(404).json({
         success: false,
         error: 'Coach not found'
       });
     }
+    
+    apiLogger.info(`Successfully retrieved coach profile`, {
+      endpoint: `/api/coaches/${id}`,
+      coachId: id,
+      coachName: coach.firstName + ' ' + coach.lastName,
+      ip: clientIP
+    });
     
     return res.json({
       success: true,
@@ -55,7 +95,16 @@ router.get('/:id', async (req: Request, res: Response) => {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    logger.error('Error getting coach:', error);
+    const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
+    
+    apiLogger.error('Error fetching coach profile', {
+      endpoint: `/api/coaches/${req.params.id}`,
+      coachId: req.params.id,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      ip: clientIP,
+      userAgent: req.get('User-Agent')
+    });
+    
     return res.status(500).json({
       success: false,
       error: 'Failed to fetch coach'

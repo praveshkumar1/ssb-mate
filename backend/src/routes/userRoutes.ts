@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { logger } from '../utils/logger';
+import { logger, apiLogger } from '../utils/logger';
 import User from '../models/User';
 
 const router = Router();
@@ -7,7 +7,14 @@ const router = Router();
 // GET /api/users/profile - Get user profile (placeholder)
 router.get('/profile', (req: Request, res: Response) => {
   try {
-    logger.info('Getting user profile');
+    const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
+    
+    apiLogger.info('Accessing user profile endpoint', {
+      endpoint: '/api/users/profile',
+      ip: clientIP,
+      userAgent: req.get('User-Agent'),
+      note: 'Authentication not yet implemented'
+    });
     
     return res.json({
       success: true,
@@ -15,7 +22,15 @@ router.get('/profile', (req: Request, res: Response) => {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    logger.error('Error in user profile endpoint:', error);
+    const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
+    
+    apiLogger.error('Error in user profile endpoint', {
+      endpoint: '/api/users/profile',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      ip: clientIP,
+      userAgent: req.get('User-Agent')
+    });
+    
     return res.status(500).json({
       success: false,
       error: 'Internal server error'

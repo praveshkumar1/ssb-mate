@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { body, validationResult } from 'express-validator';
 import Resource from '../models/Resource';
-import { logger } from '../utils/logger';
+import { logger, apiLogger } from '../utils/logger';
 
 const router = Router();
 

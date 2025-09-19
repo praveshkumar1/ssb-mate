@@ -1,19 +1,31 @@
 import { Router, Request, Response } from 'express';
 import { body, validationResult } from 'express-validator';
 import Session from '../models/Session';
-import { logger } from '../utils/logger';
+import { logger, apiLogger } from '../utils/logger';
 
 const router = Router();
 
 // GET /api/sessions - Get all sessions
 router.get('/', async (req: Request, res: Response) => {
   try {
+    const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
+    
+    apiLogger.info('Fetching all sessions', {
+      endpoint: '/api/sessions',
+      ip: clientIP,
+      userAgent: req.get('User-Agent')
+    });
+    
     const sessions = await Session.find()
       .populate('mentorId', 'firstName lastName email')
       .populate('menteeId', 'firstName lastName email')
       .sort({ createdAt: -1 });
 
-    logger.info('Getting all sessions');
+    apiLogger.info(`Successfully retrieved ${sessions.length} sessions`, {
+      endpoint: '/api/sessions',
+      count: sessions.length,
+      ip: clientIP
+    });
 
     return res.json({
       success: true,
@@ -22,7 +34,15 @@ router.get('/', async (req: Request, res: Response) => {
     });
 
   } catch (error) {
-    logger.error('Error getting sessions:', error);
+    const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
+    
+    apiLogger.error('Error fetching sessions', {
+      endpoint: '/api/sessions',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      ip: clientIP,
+      userAgent: req.get('User-Agent')
+    });
+    
     return res.status(500).json({
       success: false,
       message: 'Internal server error while retrieving sessions'

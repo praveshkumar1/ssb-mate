@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { body, validationResult } from 'express-validator';
 import User from '../models/User';
-import { logger } from '../utils/logger';
+import { logger, authLogger, securityLogger } from '../utils/logger';
 
 const router = Router();
 
@@ -55,9 +55,19 @@ router.post('/register', registerValidation, async (req: Request, res: Response)
 
     const { email, password, firstName, lastName, role, phoneNumber, bio } = req.body;
 
+    // Get IP address for logging
+    const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress || 'unknown';
+
     // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
+      securityLogger.suspiciousActivity(
+        'Registration attempt with existing email',
+        email,
+        clientIP,
+        { userAgent: req.get('User-Agent') }
+      );
+      
       return res.status(400).json({
         success: false,
         message: 'User with this email already exists'
@@ -94,7 +104,14 @@ router.post('/register', registerValidation, async (req: Request, res: Response)
       { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
     );
 
-    logger.info(`New user registered: ${email} as ${role}`);
+    authLogger.register(email, role, clientIP);
+    logger.info(`New user registered: ${email} as ${role}`, {
+      userId: newUser._id,
+      email,
+      role,
+      ip: clientIP,
+      userAgent: req.get('User-Agent')
+    });
 
     // Remove password from response
     const userResponse = newUser.toJSON();
@@ -133,9 +150,21 @@ router.post('/login', loginValidation, async (req: Request, res: Response) => {
 
     const { email, password } = req.body;
 
+    // Get IP address and User Agent for logging
+    const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress || 'unknown';
+    const userAgent = req.get('User-Agent') || 'unknown';
+
     // Find user by email
     const user = await User.findOne({ email });
     if (!user) {
+      authLogger.login(email, false, clientIP, userAgent);
+      securityLogger.suspiciousActivity(
+        'Login attempt with non-existent email',
+        email,
+        clientIP,
+        { userAgent }
+      );
+      
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password'
@@ -144,6 +173,14 @@ router.post('/login', loginValidation, async (req: Request, res: Response) => {
 
     // Check if user is active
     if (!user.isActive) {
+      authLogger.login(email, false, clientIP, userAgent);
+      securityLogger.suspiciousActivity(
+        'Login attempt with deactivated account',
+        email,
+        clientIP,
+        { userAgent, userId: user._id }
+      );
+      
       return res.status(401).json({
         success: false,
         message: 'Account has been deactivated. Please contact support.'
@@ -153,6 +190,14 @@ router.post('/login', loginValidation, async (req: Request, res: Response) => {
     // Verify password
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
+      authLogger.login(email, false, clientIP, userAgent);
+      securityLogger.suspiciousActivity(
+        'Login attempt with invalid password',
+        email,
+        clientIP,
+        { userAgent, userId: user._id }
+      );
+      
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password'
@@ -170,7 +215,15 @@ router.post('/login', loginValidation, async (req: Request, res: Response) => {
       { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
     );
 
-    logger.info(`User logged in: ${email}`);
+    // Log successful login
+    authLogger.login(email, true, clientIP, userAgent);
+    logger.info(`User logged in: ${email}`, {
+      userId: user._id,
+      email: user.email,
+      role: user.role,
+      ip: clientIP,
+      userAgent
+    });
 
     // Remove password from response
     const userResponse = user.toJSON();
@@ -210,8 +263,20 @@ router.post('/forgot-password', [
 
     const { email } = req.body;
 
+    // Get IP address for logging
+    const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress || 'unknown';
+    const userAgent = req.get('User-Agent') || 'unknown';
+
     const user = await User.findOne({ email });
     if (!user) {
+      // Log password reset attempt for non-existent user
+      securityLogger.suspiciousActivity(
+        'Password reset attempt for non-existent email',
+        email,
+        clientIP,
+        { userAgent }
+      );
+      
       // Don't reveal whether user exists or not for security
       return res.json({
         success: true,
@@ -219,9 +284,14 @@ router.post('/forgot-password', [
       });
     }
 
-    // TODO: Implement email sending for password reset
-    // For now, just log it
-    logger.info(`Password reset requested for: ${email}`);
+    // Log password reset request
+    authLogger.passwordReset(email, clientIP);
+    logger.info(`Password reset requested for: ${email}`, {
+      userId: user._id,
+      email,
+      ip: clientIP,
+      userAgent
+    });
 
     return res.json({
       success: true,
