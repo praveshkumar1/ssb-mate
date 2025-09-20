@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from 'react-router-dom';
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -19,9 +20,9 @@ const Navbar = () => {
           {/* Desktop Navigation */}
           <div className="hidden md:block">
             <div className="ml-10 flex items-baseline space-x-4">
-              <a href="#coaches" className="text-foreground hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-colors">
+              <Link to="/coaches" className="text-foreground hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-colors">
                 Find Coaches
-              </a>
+              </Link>
               <a href="#how-it-works" className="text-foreground hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-colors">
                 How it Works
               </a>
@@ -36,8 +37,8 @@ const Navbar = () => {
 
           {/* Desktop Auth Buttons */}
           <div className="hidden md:flex items-center space-x-4">
-            <Button variant="ghost">Sign In</Button>
-            <Button>Get Started</Button>
+            <Link to="/login"><Button variant="ghost">Sign In</Button></Link>
+            <Link to="/register"><Button>Get Started</Button></Link>
           </div>
 
           {/* Mobile menu button */}
@@ -57,9 +58,9 @@ const Navbar = () => {
         {isMenuOpen && (
           <div className="md:hidden">
             <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 border-t">
-              <a href="#coaches" className="text-foreground hover:text-primary block px-3 py-2 rounded-md text-base font-medium">
+              <Link to="/coaches" className="text-foreground hover:text-primary block px-3 py-2 rounded-md text-base font-medium">
                 Find Coaches
-              </a>
+              </Link>
               <a href="#how-it-works" className="text-foreground hover:text-primary block px-3 py-2 rounded-md text-base font-medium">
                 How it Works
               </a>
@@ -70,8 +71,8 @@ const Navbar = () => {
                 About
               </a>
               <div className="flex flex-col space-y-2 pt-4">
-                <Button variant="ghost" className="justify-start">Sign In</Button>
-                <Button className="justify-start">Get Started</Button>
+                <Link to="/login"><Button variant="ghost" className="justify-start">Sign In</Button></Link>
+                <Link to="/register"><Button className="justify-start">Get Started</Button></Link>
               </div>
             </div>
           </div>

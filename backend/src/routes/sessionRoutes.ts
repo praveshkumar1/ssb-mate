@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { body, validationResult } from 'express-validator';
 import Session from '../models/Session';
 import { logger, apiLogger } from '../utils/logger';
+import { authenticateToken } from '../middleware/auth';
 
 const router = Router();
 
@@ -84,7 +85,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 });
 
 // POST /api/sessions - Create new session
-router.post('/', [
+router.post('/', authenticateToken, [
   body('title').trim().isLength({ min: 3 }).withMessage('Title must be at least 3 characters long'),
   body('description').trim().isLength({ min: 10 }).withMessage('Description must be at least 10 characters long'),
   body('mentorId').isMongoId().withMessage('Valid mentor ID is required'),
@@ -112,9 +113,14 @@ router.post('/', [
       meetingLink
     } = req.body;
 
-    // For now, we'll use a placeholder menteeId since we don't have auth middleware
-    // In production, this would come from the authenticated user
-    const menteeId = req.body.menteeId || '507f1f77bcf86cd799439011'; // placeholder
+  // Use authenticated user as menteeId. `authMiddleware` attaches a minimal `req.user` with `userId`.
+  const authUserId = (req as any).user?.userId || (req as any).user?._id && (req as any).user._id.toString();
+  const menteeId = authUserId || req.body.menteeId;
+
+  if (!menteeId) {
+    logger.warn('Attempt to create session without menteeId (authenticated user missing)', { endpoint: '/api/sessions', ip: req.ip });
+    return res.status(401).json({ success: false, message: 'Authentication required to create session' });
+  }
 
     const newSession = new Session({
       title,
@@ -128,7 +134,7 @@ router.post('/', [
       status: 'scheduled'
     });
 
-    await newSession.save();
+  await newSession.save();
 
     // Populate the saved session with mentor and mentee details
     const populatedSession = await Session.findById(newSession._id)
@@ -153,7 +159,7 @@ router.post('/', [
 });
 
 // PUT /api/sessions/:id - Update session
-router.put('/:id', async (req: Request, res: Response) => {
+router.put('/:id', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
@@ -191,7 +197,7 @@ router.put('/:id', async (req: Request, res: Response) => {
 });
 
 // DELETE /api/sessions/:id - Delete session
-router.delete('/:id', async (req: Request, res: Response) => {
+router.delete('/:id', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 

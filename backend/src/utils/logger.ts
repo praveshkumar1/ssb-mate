@@ -153,6 +153,17 @@ export const authLogger = {
       timestamp: new Date().toISOString()
     });
   }
+  ,
+  // Generic helpers for auth area
+  info: (message: string, meta?: Record<string, any>) => {
+    logger.info(message, { type: 'auth', ...meta, timestamp: new Date().toISOString() });
+  },
+  warn: (message: string, meta?: Record<string, any>) => {
+    logger.warn(message, { type: 'auth', ...meta, timestamp: new Date().toISOString() });
+  },
+  error: (message: string, meta?: Record<string, any>) => {
+    logger.error(message, { type: 'auth', ...meta, timestamp: new Date().toISOString() });
+  }
 };
 
 export const securityLogger = {
@@ -188,6 +199,17 @@ export const securityLogger = {
       timestamp: new Date().toISOString()
     });
   }
+  ,
+  // Generic helpers for security area
+  info: (message: string, meta?: Record<string, any>) => {
+    logger.info(message, { type: 'security', ...meta, timestamp: new Date().toISOString() });
+  },
+  warn: (message: string, meta?: Record<string, any>) => {
+    logger.warn(message, { type: 'security', ...meta, timestamp: new Date().toISOString() });
+  },
+  error: (message: string, meta?: Record<string, any>) => {
+    logger.error(message, { type: 'security', ...meta, timestamp: new Date().toISOString() });
+  }
 };
 
 export const apiLogger = {
@@ -204,17 +226,47 @@ export const apiLogger = {
     });
   },
   
-  error: (method: string, url: string, error: Error, ip?: string, userId?: string) => {
-    logger.error('API Error', {
+  // Generic info logger for API routes (supports message + meta object)
+  info: (message: string, meta?: Record<string, any>) => {
+    logger.info(message, {
       type: 'api',
-      method,
-      url,
-      error: error.message,
-      stack: error.stack,
-      ip,
-      userId,
+      ...meta,
       timestamp: new Date().toISOString()
     });
+  },
+
+  // Generic warn logger for API routes
+  warn: (message: string, meta?: Record<string, any>) => {
+    logger.warn(message, {
+      type: 'api',
+      ...meta,
+      timestamp: new Date().toISOString()
+    });
+  },
+
+  // Flexible error logger: supports either (method, url, error, ip?, userId?)
+  // or (message, meta)
+  error: (...args: any[]) => {
+    if (typeof args[2] === 'object' && args[2] instanceof Error) {
+      const [method, url, error, ip, userId] = args as [string, string, Error, string?, string?];
+      logger.error('API Error', {
+        type: 'api',
+        method,
+        url,
+        error: error.message,
+        stack: error.stack,
+        ip,
+        userId,
+        timestamp: new Date().toISOString()
+      });
+    } else {
+      const [message, meta] = args as [string, Record<string, any>?];
+      logger.error(message, {
+        type: 'api',
+        ...meta,
+        timestamp: new Date().toISOString()
+      });
+    }
   }
 };
 

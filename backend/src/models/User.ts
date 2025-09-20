@@ -161,7 +161,8 @@ const UserSchema: Schema = new Schema({
 });
 
 // Index for search optimization
-UserSchema.index({ email: 1 });
+// Note: 'email' already has `unique: true` in the schema definition above which creates
+// an index automatically. Avoid declaring the same index twice to prevent Mongoose warnings.
 UserSchema.index({ role: 1 });
 UserSchema.index({ isVerified: 1 });
 UserSchema.index({ specializations: 1 });

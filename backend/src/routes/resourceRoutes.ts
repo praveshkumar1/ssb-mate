@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { body, validationResult } from 'express-validator';
 import Resource from '../models/Resource';
 import { logger, apiLogger } from '../utils/logger';
+import { authenticateToken } from '../middleware/auth';
 
 const router = Router();
 
@@ -23,7 +24,7 @@ router.get('/', async (req: Request, res: Response) => {
     }
 
     const resources = await Resource.find(filter)
-      .populate('createdBy', 'firstName lastName')
+      .populate('authorId', 'firstName lastName')
       .sort({ createdAt: -1 });
 
     logger.info('Getting all resources');
@@ -49,7 +50,7 @@ router.get('/:id', async (req: Request, res: Response) => {
     const { id } = req.params;
 
     const resource = await Resource.findById(id)
-      .populate('createdBy', 'firstName lastName');
+      .populate('authorId', 'firstName lastName');
 
     if (!resource) {
       return res.status(404).json({
@@ -76,14 +77,15 @@ router.get('/:id', async (req: Request, res: Response) => {
 });
 
 // POST /api/resources - Create new resource
-router.post('/', [
+router.post('/', authenticateToken, [
   body('title').trim().isLength({ min: 3 }).withMessage('Title must be at least 3 characters long'),
-  body('description').trim().isLength({ min: 10 }).withMessage('Description must be at least 10 characters long'),
-  body('type').isIn(['study_material', 'video', 'practice_test', 'article', 'ebook', 'webinar']).withMessage('Valid resource type is required'),
-  body('category').isIn(['interview_preparation', 'group_discussion', 'planning_exercise', 'psychological_tests', 'general']).withMessage('Valid category is required'),
-  body('url').isURL().withMessage('Valid URL is required'),
+  body('description').optional().trim().isLength({ min: 10 }).withMessage('Description must be at least 10 characters long'),
+  body('content').trim().isLength({ min: 10 }).withMessage('Content must be at least 10 characters long'),
+  body('category').isIn(['interview_tips', 'preparation_guide', 'assessment_format', 'success_stories', 'mock_tests', 'video_tutorials']).withMessage('Valid category is required'),
+  body('fileUrl').optional().isURL().withMessage('Valid file URL is required'),
+  body('thumbnailUrl').optional().isURL().withMessage('Valid thumbnail URL is required'),
   body('difficulty').optional().isIn(['beginner', 'intermediate', 'advanced']).withMessage('Valid difficulty level is required'),
-  body('tags').optional().isArray().withMessage('Tags must be an array')
+  body('tags').optional().custom((v) => Array.isArray(v) || typeof v === 'string').withMessage('Tags must be an array or comma-separated string')
 ], async (req: Request, res: Response) => {
   try {
     const errors = validationResult(req);
@@ -98,34 +100,45 @@ router.post('/', [
     const {
       title,
       description,
-      type,
+      content,
       category,
-      url,
+      fileUrl,
+      thumbnailUrl,
       difficulty,
       tags
     } = req.body;
 
-    // For now, we'll use a placeholder createdBy since we don't have auth middleware
-    // In production, this would come from the authenticated user
-    const createdBy = req.body.createdBy || '507f1f77bcf86cd799439011'; // placeholder
+    // Use authenticated user as author
+    const authUserId = (req as any).user?.userId || (req as any).user?._id && (req as any).user._id.toString();
+    if (!authUserId) {
+      return res.status(401).json({ success: false, message: 'Authentication required to create resource' });
+    }
+
+    // Normalize tags: accept comma-separated string or array
+    let normalizedTags: string[] = [];
+    if (tags) {
+      if (Array.isArray(tags)) normalizedTags = tags.map((t: any) => String(t).trim().toLowerCase()).filter(Boolean);
+      else if (typeof tags === 'string') normalizedTags = tags.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+    }
 
     const newResource = new Resource({
       title,
       description,
-      type,
+      content,
       category,
-      url,
-      difficulty: difficulty || 'intermediate',
-      tags: tags || [],
-      createdBy,
-      isActive: true
+      fileUrl: fileUrl || undefined,
+      thumbnailUrl: thumbnailUrl || undefined,
+      difficulty: difficulty || 'beginner',
+      tags: normalizedTags,
+      authorId: authUserId,
+      isPublic: true
     });
 
     await newResource.save();
 
     // Populate the saved resource with creator details
     const populatedResource = await Resource.findById(newResource._id)
-      .populate('createdBy', 'firstName lastName');
+      .populate('authorId', 'firstName lastName');
 
     logger.info(`New resource created: ${newResource._id}`);
 
@@ -145,23 +158,36 @@ router.post('/', [
 });
 
 // PUT /api/resources/:id - Update resource
-router.put('/:id', async (req: Request, res: Response) => {
+router.put('/:id', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const updateData = req.body;
+    const updateData = { ...req.body };
+
+    // Prevent changing creator from request body
+    if ('createdBy' in updateData) delete (updateData as any).createdBy;
+
+    const authUserId = (req as any).user?.userId || (req as any).user?._id && (req as any).user._id.toString();
+
+    // Ensure resource exists and check authorization (only creator or admin can update)
+  const existing = await Resource.findById(id).populate('authorId', 'firstName lastName');
+    if (!existing) {
+      return res.status(404).json({ success: false, message: 'Resource not found' });
+    }
+
+    const isCreator = existing.authorId && ((existing.authorId as any)._id || (existing.authorId as any).id)
+      ? ((existing.authorId as any)._id || (existing.authorId as any).id).toString() === authUserId
+      : false;
+    const isAdmin = (req as any).user?.role === 'admin';
+
+    if (!isCreator && !isAdmin) {
+      return res.status(403).json({ success: false, message: 'Insufficient permissions to update resource' });
+    }
 
     const resource = await Resource.findByIdAndUpdate(
       id,
       { ...updateData, updatedAt: new Date() },
       { new: true, runValidators: true }
-    ).populate('createdBy', 'firstName lastName');
-
-    if (!resource) {
-      return res.status(404).json({
-        success: false,
-        message: 'Resource not found'
-      });
-    }
+    ).populate('authorId', 'firstName lastName');
 
     logger.info(`Resource updated: ${id}`);
 
@@ -181,18 +207,27 @@ router.put('/:id', async (req: Request, res: Response) => {
 });
 
 // DELETE /api/resources/:id - Delete resource
-router.delete('/:id', async (req: Request, res: Response) => {
+router.delete('/:id', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
-    const resource = await Resource.findByIdAndDelete(id);
+    const authUserId = (req as any).user?.userId || (req as any).user?._id && (req as any).user._id.toString();
 
-    if (!resource) {
-      return res.status(404).json({
-        success: false,
-        message: 'Resource not found'
-      });
+  const existing = await Resource.findById(id).populate('authorId', 'firstName lastName');
+    if (!existing) {
+      return res.status(404).json({ success: false, message: 'Resource not found' });
     }
+
+    const isCreator = existing.authorId && ((existing.authorId as any)._id || (existing.authorId as any).id)
+      ? ((existing.authorId as any)._id || (existing.authorId as any).id).toString() === authUserId
+      : false;
+    const isAdmin = (req as any).user?.role === 'admin';
+
+    if (!isCreator && !isAdmin) {
+      return res.status(403).json({ success: false, message: 'Insufficient permissions to delete resource' });
+    }
+
+    const resource = await Resource.findByIdAndDelete(id);
 
     logger.info(`Resource deleted: ${id}`);
 

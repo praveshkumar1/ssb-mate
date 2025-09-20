@@ -34,6 +34,11 @@ export const resourceService = {
     return apiClient.get<Resource>(`/resources/${id}`);
   },
 
+  // Create resource
+  createResource: (payload: any): Promise<Resource> => {
+    return apiClient.post<Resource>('/resources', payload);
+  },
+
   // Search resources
   searchResources: (query: string): Promise<Resource[]> => {
     return apiClient.get<Resource[]>(`/resources/search?q=${encodeURIComponent(query)}`);

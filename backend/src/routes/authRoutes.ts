@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { body, validationResult } from 'express-validator';
 import User from '../models/User';
 import { logger, authLogger, securityLogger } from '../utils/logger';
+import { hash } from 'crypto';
 
 const router = Router();
 
@@ -148,14 +149,15 @@ router.post('/login', loginValidation, async (req: Request, res: Response) => {
       });
     }
 
-    const { email, password } = req.body;
+  let { email, password } = req.body;
+  if (typeof password === 'string') password = password.trim();
 
     // Get IP address and User Agent for logging
     const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress || 'unknown';
     const userAgent = req.get('User-Agent') || 'unknown';
 
-    // Find user by email
-    const user = await User.findOne({ email });
+  // Find user by email
+  const user = await User.findOne({ email });
     if (!user) {
       authLogger.login(email, false, clientIP, userAgent);
       securityLogger.suspiciousActivity(
@@ -186,9 +188,9 @@ router.post('/login', loginValidation, async (req: Request, res: Response) => {
         message: 'Account has been deactivated. Please contact support.'
       });
     }
-
-    // Verify password
+    // Check password
     const isPasswordValid = await bcrypt.compare(password, user.password);
+    console.log('password validity result',isPasswordValid);
     if (!isPasswordValid) {
       authLogger.login(email, false, clientIP, userAgent);
       securityLogger.suspiciousActivity(
