@@ -2,32 +2,78 @@ import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { body, validationResult } from 'express-validator';
+import rateLimit from 'express-rate-limit';
 import User from '../models/User';
 import { logger, authLogger, securityLogger } from '../utils/logger';
 import { hash } from 'crypto';
 
 const router = Router();
 
+// Strict rate limiting for authentication endpoints
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Limit each IP to 5 requests per windowMs
+  message: {
+    success: false,
+    message: 'Too many authentication attempts, please try again later'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true, // Don't count successful requests
+});
+
+// Stricter rate limiting for login attempts
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 3, // Limit each IP to 3 login attempts per windowMs
+  message: {
+    success: false,
+    message: 'Too many login attempts, please try again later'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true,
+});
+
 // Registration validation rules
 const registerValidation = [
   body('email')
     .isEmail()
     .normalizeEmail()
+    .trim()
+    .escape()
     .withMessage('Please provide a valid email'),
   body('password')
-    .isLength({ min: 6 })
-    .withMessage('Password must be at least 6 characters long'),
+    .isLength({ min: 8 })
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)
+    .withMessage('Password must be at least 8 characters with uppercase, lowercase, number and special character'),
   body('firstName')
     .trim()
-    .isLength({ min: 2 })
-    .withMessage('First name must be at least 2 characters long'),
+    .escape()
+    .isLength({ min: 2, max: 50 })
+    .matches(/^[a-zA-Z\s]+$/)
+    .withMessage('First name must be 2-50 characters and contain only letters'),
   body('lastName')
     .trim()
-    .isLength({ min: 2 })
-    .withMessage('Last name must be at least 2 characters long'),
+    .escape()
+    .isLength({ min: 2, max: 50 })
+    .matches(/^[a-zA-Z\s]+$/)
+    .withMessage('Last name must be 2-50 characters and contain only letters'),
   body('role')
     .isIn(['mentor', 'mentee'])
-    .withMessage('Role must be either mentor or mentee')
+    .withMessage('Role must be either mentor or mentee'),
+  body('phoneNumber')
+    .optional()
+    .trim()
+    .escape()
+    .isMobilePhone('any')
+    .withMessage('Please provide a valid phone number'),
+  body('bio')
+    .optional()
+    .trim()
+    .escape()
+    .isLength({ max: 500 })
+    .withMessage('Bio must be less than 500 characters')
 ];
 
 // Additional optional validation for mentor fields when role=mentor
@@ -53,14 +99,17 @@ const loginValidation = [
   body('email')
     .isEmail()
     .normalizeEmail()
+    .trim()
+    .escape()
     .withMessage('Please provide a valid email'),
   body('password')
     .notEmpty()
+    .trim()
     .withMessage('Password is required')
 ];
 
 // POST /api/auth/register - Register a new user
-router.post('/register', registerValidation, async (req: Request, res: Response) => {
+router.post('/register', authLimiter, registerValidation, async (req: Request, res: Response) => {
   try {
     // Check for validation errors
     const errors = validationResult(req);
@@ -142,13 +191,22 @@ router.post('/register', registerValidation, async (req: Request, res: Response)
     await newUser.save();
 
     // Generate JWT token
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      logger.error('JWT_SECRET environment variable is not configured');
+      return res.status(500).json({
+        success: false,
+        message: 'Authentication configuration error'
+      });
+    }
+
     const token = jwt.sign(
       { 
         userId: newUser._id, 
         email: newUser.email, 
         role: newUser.role 
       },
-      process.env.JWT_SECRET || 'fallback-secret',
+      jwtSecret,
       { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
     );
 
@@ -184,7 +242,7 @@ router.post('/register', registerValidation, async (req: Request, res: Response)
 });
 
 // POST /api/auth/login - Login user
-router.post('/login', loginValidation, async (req: Request, res: Response) => {
+router.post('/login', loginLimiter, loginValidation, async (req: Request, res: Response) => {
   try {
     // Check for validation errors
     const errors = validationResult(req);
@@ -253,13 +311,22 @@ router.post('/login', loginValidation, async (req: Request, res: Response) => {
     }
 
     // Generate JWT token
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      logger.error('JWT_SECRET environment variable is not configured');
+      return res.status(500).json({
+        success: false,
+        message: 'Authentication configuration error'
+      });
+    }
+
     const token = jwt.sign(
       { 
         userId: user._id, 
         email: user.email, 
         role: user.role 
       },
-      process.env.JWT_SECRET || 'fallback-secret',
+      jwtSecret,
       { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
     );
 

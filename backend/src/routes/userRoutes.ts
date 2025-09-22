@@ -6,6 +6,7 @@ import { authenticateToken } from '../middleware/auth';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import crypto from 'crypto';
 
 const router = Router();
 
@@ -26,19 +27,33 @@ const storage = multer.diskStorage({
     cb(null, avatarsDir);
   },
   filename: function (req, file, cb) {
-    const ext = path.extname(file.originalname) || '.jpg';
-    const name = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`;
+    const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
+    // Generate a secure random filename using crypto
+    const name = `${Date.now()}-${crypto.randomBytes(6).toString('hex')}${ext}`;
     cb(null, name);
   }
 });
 
 const upload = multer({
   storage,
-  limits: { fileSize: 2 * 1024 * 1024 }, // 2 MB limit
+  limits: { 
+    fileSize: 2 * 1024 * 1024, // 2 MB limit
+    files: 1 // Only allow 1 file
+  },
   fileFilter: (req, file, cb) => {
-    const allowed = /jpeg|jpg|png/;
+    // Check file extension
+    const allowedExtensions = /^.*\.(jpeg|jpg|png)$/i;
     const ext = path.extname(file.originalname).toLowerCase();
-    if (allowed.test(ext) || allowed.test(file.mimetype)) {
+    
+    // Check MIME type
+    const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+    
+    // Validate filename (prevent path traversal)
+    if (file.originalname.includes('..') || file.originalname.includes('/') || file.originalname.includes('\\')) {
+      return cb(new Error('Invalid filename detected'));
+    }
+    
+    if (allowedExtensions.test(file.originalname) && allowedMimeTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
       cb(new Error('Only images are allowed (jpeg, jpg, png)'));
