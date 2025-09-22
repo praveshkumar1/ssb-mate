@@ -30,6 +30,24 @@ const registerValidation = [
     .withMessage('Role must be either mentor or mentee')
 ];
 
+// Additional optional validation for mentor fields when role=mentor
+const mentorConditionalValidation = [
+  body('experience').optional().isFloat({ min: 0 }).withMessage('Experience must be a non-negative number'),
+  body('hourlyRate').optional().isFloat({ min: 0 }).withMessage('Hourly rate must be a non-negative number'),
+  body('education').optional().isString().isLength({ min: 1 }).withMessage('Education must be a non-empty string'),
+  body('achievements').optional().custom(value => {
+    // allow array or comma-separated string
+    if (Array.isArray(value)) return true;
+    if (typeof value === 'string') return value.length > 0;
+    throw new Error('Achievements must be an array or comma-separated string');
+  }),
+  body('specializations').optional().custom(value => {
+    if (Array.isArray(value)) return true;
+    if (typeof value === 'string') return value.length > 0;
+    throw new Error('Specializations must be an array or comma-separated string');
+  })
+];
+
 // Login validation rules
 const loginValidation = [
   body('email')
@@ -54,7 +72,31 @@ router.post('/register', registerValidation, async (req: Request, res: Response)
       });
     }
 
-    const { email, password, firstName, lastName, role, phoneNumber, bio } = req.body;
+  const { email, password, firstName, lastName, role, phoneNumber, bio } = req.body;
+    // If role is mentor, validate mentor-specific fields more strictly
+    if (role === 'mentor') {
+      const mentorErrors: any[] = [];
+      if (req.body.experience !== undefined) {
+        const exp = Number(req.body.experience);
+        if (Number.isNaN(exp) || exp < 0) mentorErrors.push({ param: 'experience', msg: 'Experience must be a non-negative number' });
+      }
+      if (req.body.hourlyRate !== undefined) {
+        const hr = Number(req.body.hourlyRate);
+        if (Number.isNaN(hr) || hr < 0) mentorErrors.push({ param: 'hourlyRate', msg: 'Hourly rate must be a non-negative number' });
+      }
+      if (req.body.education !== undefined && String(req.body.education).trim().length === 0) {
+        mentorErrors.push({ param: 'education', msg: 'Education must be a non-empty string' });
+      }
+      if (mentorErrors.length > 0) {
+        return res.status(400).json({ success: false, message: 'Validation failed', errors: mentorErrors });
+      }
+    }
+  // Optional mentor-specific fields
+  const experience = req.body.experience !== undefined ? Number(req.body.experience) : undefined;
+  const education = req.body.education ? String(req.body.education) : undefined;
+  const achievements = req.body.achievements ? (Array.isArray(req.body.achievements) ? req.body.achievements : String(req.body.achievements).split(',').map((s: string) => s.trim()).filter(Boolean)) : [];
+  const hourlyRate = req.body.hourlyRate !== undefined ? Number(req.body.hourlyRate) : undefined;
+  const specializations = req.body.specializations ? (Array.isArray(req.body.specializations) ? req.body.specializations : String(req.body.specializations).split(',').map((s: string) => s.trim()).filter(Boolean)) : [];
 
     // Get IP address for logging
     const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress || 'unknown';
@@ -88,6 +130,11 @@ router.post('/register', registerValidation, async (req: Request, res: Response)
       role,
       phoneNumber,
       bio,
+      experience: typeof experience === 'number' && !Number.isNaN(experience) ? experience : undefined,
+      education: education || undefined,
+      achievements: achievements,
+      hourlyRate: typeof hourlyRate === 'number' && !Number.isNaN(hourlyRate) ? hourlyRate : undefined,
+      specializations: specializations,
       isActive: true,
       isVerified: role === 'mentee' // Auto-verify mentees, mentors need manual verification
     });
@@ -190,7 +237,6 @@ router.post('/login', loginValidation, async (req: Request, res: Response) => {
     }
     // Check password
     const isPasswordValid = await bcrypt.compare(password, user.password);
-    console.log('password validity result',isPasswordValid);
     if (!isPasswordValid) {
       authLogger.login(email, false, clientIP, userAgent);
       securityLogger.suspiciousActivity(

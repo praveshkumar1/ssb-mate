@@ -1,46 +1,36 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import authService from '@/services/authService';
+import { useAuth } from '@/contexts/AuthContext';
 import { apiClient } from '@/services/api';
-import { toast } from '@/components/ui/use-toast';
-
-// Quick JWT decode (no verification) to get payload
-function decodeJwtPayload(token: string) {
-  try {
-    const parts = token.split('.');
-    if (parts.length < 2) return null;
-    const payload = parts[1];
-    const decoded = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
-    return JSON.parse(decodeURIComponent(escape(decoded)));
-  } catch (e) {
-    return null;
-  }
-}
+import { useToast } from '@/components/ui/use-toast';
 
 const UserProfileEdit = () => {
-  const storedUser = authService.getCurrentUser();
+  const [storedUser, setStoredUser] = useState<any>(authService.getCurrentUser());
+  const auth = useAuth();
   const token = authService.getToken();
   const [form, setForm] = useState<any>({});
   const [loading, setLoading] = useState(false);
   const [loadingProfile, setLoadingProfile] = useState(false);
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
   useEffect(() => {
-    // If we already have a stored user, use it
     if (storedUser) {
       setForm(storedUser);
       return;
     }
 
-    // If no stored user but token exists, try to decode token and fetch user from backend list
     const fetchUserFromApi = async () => {
       if (!token) return;
       setLoadingProfile(true);
       try {
-        // Call protected endpoint to fetch authenticated user's profile
         const resp: any = await apiClient.get('/users/profile');
         const found = resp?.data ?? resp;
         if (found) {
           setForm(found);
-          authService.storeAuthData(token, found);
+          auth.login(token, found);
+          setStoredUser(found);
         }
       } catch (err) {
         console.error('Failed to fetch profile from /users/profile', err);
@@ -50,17 +40,32 @@ const UserProfileEdit = () => {
     };
 
     fetchUserFromApi();
-  }, [storedUser, token]);
+  }, [token]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      await apiClient.put(`/users/profile`, form);
-      toast({ title: 'Profile updated', description: 'Your profile has been saved' });
-      // Update stored copy
-      if (token) authService.storeAuthData(token, form);
-    } catch (err) { console.error(err); toast({ title: 'Update failed', description: 'Failed to save profile' }); }
+      if (!token) {
+        toast({ title: 'Not authenticated', description: 'Please sign in to edit your profile' });
+        navigate('/login', { replace: true });
+        setLoading(false);
+        return;
+      }
+
+      await apiClient.put('/users/profile', form);
+  toast({ title: 'Profile updated', description: 'Your profile has been saved' });
+  auth.login(token, form);
+  setStoredUser(form);
+    } catch (err: any) {
+      console.error('Profile update error', err);
+      if (err?.status === 401) {
+        toast({ title: 'Session expired', description: 'Please sign in again to save changes' });
+        setLoading(false);
+        return;
+      }
+      toast({ title: 'Update failed', description: err?.message || 'Failed to save profile' });
+    }
     setLoading(false);
   };
 
@@ -81,3 +86,4 @@ const UserProfileEdit = () => {
 };
 
 export default UserProfileEdit;
+

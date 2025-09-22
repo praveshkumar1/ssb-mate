@@ -1,13 +1,18 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import authService from '@/services/authService';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/components/ui/use-toast';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import Spinner from '@/components/ui/Spinner';
 
 const Register = () => {
-  const [form, setForm] = useState({ email: '', password: '', firstName: '', lastName: '', role: 'mentee' });
+  const [form, setForm] = useState<any>({ email: '', password: '', firstName: '', lastName: '', role: 'mentee' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const auth = useAuth();
 
   const handleChange = (k: string, v: any) => setForm(prev => ({ ...prev, [k]: v }));
 
@@ -17,54 +22,72 @@ const Register = () => {
     setError(null);
     try {
       const resp = await authService.register(form as any);
-      const r: any = resp;
-      const token = r?.token ?? r?.data?.token ?? null;
-      const user = r?.user ?? r?.data?.user ?? r ?? null;
+      const data: any = resp?.data ?? resp;
+      const token = data?.token ?? data?.data?.token ?? null;
+      const user = data?.user ?? data?.data?.user ?? null;
 
-      if (!token) {
-        if (r && typeof r === 'object' && 'token' in r) {
-          authService.storeAuthData(r.token, r.user ?? r);
-        } else {
-          throw new Error('Registration response missing token');
-        }
+      if (!token) throw new Error('Registration failed (no token)');
+
+  // update auth context (AuthProvider will persist to localStorage)
+      // store token & user and update context
+      auth.login(token, user);
+
+      // wait briefly for localStorage and AuthContext to settle so the protected onboarding route is accessible
+      // show a small wait animation during this time
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      if (user?.role === 'mentor') {
+        toast({ title: 'Welcome, mentor', description: 'Let\'s finish your mentor profile' });
+        navigate('/onboard/mentor', { replace: true });
       } else {
-        authService.storeAuthData(token, user);
+        toast({ title: 'Registered', description: 'Account created, redirecting to dashboard' });
+        navigate('/dashboard', { replace: true });
       }
-
-      toast({ title: 'Registered', description: 'Account created, redirecting to profile' });
-      // Navigate to profile edit so user can complete/update their profile
-      navigate('/profile/edit');
     } catch (err: any) {
-      setError(err?.message || 'Registration failed');
-      toast({ title: 'Registration failed', description: err?.message || 'Unable to create account' });
+      const msg = err?.response?.data?.message ?? err?.message ?? 'Registration failed';
+      setError(msg);
+      toast({ title: 'Registration failed', description: msg });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="w-full max-w-lg p-6 bg-white rounded shadow">
-        <h2 className="text-2xl font-bold mb-4">Register</h2>
-        <form onSubmit={submit}>
+    <main className="min-h-screen flex items-center justify-center bg-background py-12">
+      <section className="w-full max-w-lg p-8 bg-card rounded-lg shadow-md" aria-labelledby="register-heading">
+        <h1 id="register-heading" className="text-2xl font-semibold mb-2">Create an account</h1>
+        <p className="text-sm text-muted-foreground mb-6">Sign up to access coaching, sessions, and your dashboard</p>
+
+  <form onSubmit={submit} className="space-y-4" noValidate>
           <div className="grid grid-cols-2 gap-3">
-            <input placeholder="First name" className="p-2 border rounded" value={form.firstName} onChange={e => handleChange('firstName', e.target.value)} />
-            <input placeholder="Last name" className="p-2 border rounded" value={form.lastName} onChange={e => handleChange('lastName', e.target.value)} />
+            <Input placeholder="First name" value={form.firstName} onChange={e => handleChange('firstName', e.target.value)} />
+            <Input placeholder="Last name" value={form.lastName} onChange={e => handleChange('lastName', e.target.value)} />
           </div>
-          <input placeholder="Email" className="w-full mt-3 p-2 border rounded" value={form.email} onChange={e => handleChange('email', e.target.value)} />
-          <input placeholder="Password" type="password" className="w-full mt-3 p-2 border rounded" value={form.password} onChange={e => handleChange('password', e.target.value)} />
-          <div className="mt-3">
-            <label className="mr-2">Role</label>
-            <select value={form.role} onChange={e => handleChange('role', e.target.value)}>
+          <Input placeholder="Email" type="email" value={form.email} onChange={e => handleChange('email', e.target.value)} />
+          <Input placeholder="Password" type="password" value={form.password} onChange={e => handleChange('password', e.target.value)} />
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Role</label>
+            <select value={form.role} onChange={e => handleChange('role', e.target.value)} className="w-full rounded border px-3 py-2">
               <option value="mentee">Mentee</option>
               <option value="mentor">Mentor</option>
             </select>
           </div>
-          {error && <div className="text-sm text-red-600 my-2">{error}</div>}
-          <button className="mt-4 w-full py-2 bg-primary text-white rounded" disabled={loading}>{loading ? 'Registering...' : 'Register'}</button>
+
+          {/* Mentor-specific details are collected in the onboarding wizard after registration */}
+
+          {error && <div role="alert" className="text-sm text-destructive">{error}</div>}
+
+          <div>
+            <Button type="submit" className="w-full" size="lg" disabled={loading}>{loading ? <><Spinner className="w-4 h-4"/> Creating...</> : 'Create account'}</Button>
+          </div>
         </form>
-      </div>
-    </div>
+
+        <div className="mt-6 text-center text-sm text-muted-foreground">
+          Already have an account? <Link to="/login" className="text-primary font-medium hover:underline">Sign in</Link>
+        </div>
+      </section>
+    </main>
   );
 };
 

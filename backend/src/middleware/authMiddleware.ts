@@ -7,12 +7,13 @@ import User from '../models/User';
 declare global {
   namespace Express {
     interface Request {
-      user?: {
-        userId: string;
-        email: string;
-        role: string;
-        isVerified: boolean;
-      };
+        user?: {
+          userId: string;
+          _id?: string;
+          email: string;
+          role: string;
+          isVerified: boolean;
+        };
     }
   }
 }
@@ -110,10 +111,11 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
       return;
     }
 
-    // Add user info to request (safe cast for _id)
+    // Add user info to request (attach both userId and _id as string for compatibility)
     const userIdStr = (user as any)._id ? (user as any)._id.toString() : undefined;
     req.user = {
       userId: userIdStr,
+      _id: userIdStr,
       email: user.email,
       role: user.role,
       isVerified: user.isVerified

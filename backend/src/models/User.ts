@@ -12,6 +12,7 @@ export interface IUser extends Document {
   isVerified: boolean;
   bio?: string;
   experience?: number;
+  education?: string;
   specializations: string[];
   rank?: string;
   unit?: string;
@@ -74,6 +75,10 @@ const UserSchema: Schema = new Schema({
     type: Number,
     min: 0
   },
+    education: {
+      type: String,
+      trim: true
+    },
   specializations: [{
     type: String,
     trim: true

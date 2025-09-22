@@ -1,4 +1,3 @@
-import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import HeroSection from "@/components/sections/HeroSection";
 import FeaturedCoaches from "@/components/sections/FeaturedCoachesUpdated";
@@ -9,7 +8,6 @@ import BackendTester from "@/components/BackendTesterNew";
 const Index = () => {
   return (
     <div className="min-h-screen bg-background">
-      <Navbar />
       <div className="container mx-auto px-4 pt-20">
         <BackendTester />
       </div>

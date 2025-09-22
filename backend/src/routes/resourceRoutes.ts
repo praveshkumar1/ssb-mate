@@ -108,8 +108,9 @@ router.post('/', authenticateToken, [
       tags
     } = req.body;
 
-    // Use authenticated user as author
-    const authUserId = (req as any).user?.userId || (req as any).user?._id && (req as any).user._id.toString();
+    // Use authenticated user as author. `authMiddleware` may attach either {_id} or {userId}.
+    const rawAuthUser = (req as any).user?._id ?? (req as any).user?.userId;
+    const authUserId = rawAuthUser ? (rawAuthUser.toString ? rawAuthUser.toString() : String(rawAuthUser)) : undefined;
     if (!authUserId) {
       return res.status(401).json({ success: false, message: 'Authentication required to create resource' });
     }
@@ -166,7 +167,8 @@ router.put('/:id', authenticateToken, async (req: Request, res: Response) => {
     // Prevent changing creator from request body
     if ('createdBy' in updateData) delete (updateData as any).createdBy;
 
-    const authUserId = (req as any).user?.userId || (req as any).user?._id && (req as any).user._id.toString();
+  const rawAuthUser = (req as any).user?._id ?? (req as any).user?.userId;
+  const authUserId = rawAuthUser ? (rawAuthUser.toString ? rawAuthUser.toString() : String(rawAuthUser)) : undefined;
 
     // Ensure resource exists and check authorization (only creator or admin can update)
   const existing = await Resource.findById(id).populate('authorId', 'firstName lastName');
@@ -211,7 +213,8 @@ router.delete('/:id', authenticateToken, async (req: Request, res: Response) => 
   try {
     const { id } = req.params;
 
-    const authUserId = (req as any).user?.userId || (req as any).user?._id && (req as any).user._id.toString();
+  const rawAuthUser2 = (req as any).user?._id ?? (req as any).user?.userId;
+  const authUserId = rawAuthUser2 ? (rawAuthUser2.toString ? rawAuthUser2.toString() : String(rawAuthUser2)) : undefined;
 
   const existing = await Resource.findById(id).populate('authorId', 'firstName lastName');
     if (!existing) {

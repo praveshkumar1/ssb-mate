@@ -16,14 +16,30 @@ class ApiClient {
     // Get auth token if available
     const token = localStorage.getItem('token');
     
-    const config: RequestInit = {
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token && { Authorization: `Bearer ${token}` }),
-        ...options.headers,
-      },
-      ...options,
+    // Build headers carefully so options.headers can't accidentally remove Authorization
+    // If the body is FormData, let the browser set the Content-Type (with boundary) and don't set it here.
+    const defaultHeaders: Record<string, string> = {
+      ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     };
+
+    // Normalize incoming headers (could be Headers, object, or undefined)
+    const incomingHeaders: Record<string, string> = {};
+    if (options.headers instanceof Headers) {
+      options.headers.forEach((value, key) => { incomingHeaders[key] = value; });
+    } else if (options.headers && typeof options.headers === 'object') {
+      Object.assign(incomingHeaders, options.headers as Record<string, string>);
+    }
+
+    // Merge but ensure Authorization from token wins unless incoming explicitly sets it
+    const mergedHeaders = { ...defaultHeaders, ...incomingHeaders };
+
+    const config: RequestInit = {
+      ...options,
+      headers: mergedHeaders,
+    };
+
+    // (debug logs removed)
 
     try {
       const response = await fetch(url, config);
@@ -31,7 +47,10 @@ class ApiClient {
       const data = await response.json();
       
       if (!response.ok) {
-        throw new Error(data.error || data.message || `HTTP error! status: ${response.status}`);
+        const err: any = new Error(data.error || data.message || `HTTP error! status: ${response.status}`);
+        err.status = response.status;
+        err.data = data;
+        throw err;
       }
       
       // Return the data from the response for successful requests

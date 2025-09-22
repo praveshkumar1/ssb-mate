@@ -1,9 +1,9 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { apiClient } from '@/services/api';
 
 const CreateSession = () => {
-  const [form, setForm] = useState({ title: '', description: '', mentorId: '', sessionType: 'general_mentoring', duration: 60, scheduledAt: '' });
+  const [form, setForm] = useState({ title: '', description: '', mentorId: '', sessionType: 'general_mentoring', duration: 60, scheduledAt: '', price: null as number | null });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -14,11 +14,41 @@ const CreateSession = () => {
     setError(null);
     try {
       await apiClient.post('/sessions', form);
-      navigate('/sessions');
+      navigate('/dashboard/sessions');
     } catch (err: any) {
       setError(err?.message || 'Failed to create session');
     } finally { setLoading(false); }
   };
+
+  // Prefill mentorId from query string if present
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const mentorId = params.get('mentorId');
+    const startsAt = params.get('startsAt');
+    const sessionType = params.get('sessionType');
+    const minutes = params.get('minutes');
+    const price = params.get('price');
+
+    const updates: any = {};
+    if (mentorId) updates.mentorId = mentorId;
+    if (sessionType) updates.sessionType = sessionType;
+    if (minutes) updates.duration = parseInt(minutes);
+    if (price) updates.price = Number(price);
+
+    // convert ISO string to datetime-local format used by input
+    if (startsAt) {
+      const dt = new Date(startsAt);
+      if (!Number.isNaN(dt.getTime())) {
+        const pad = (n: number) => String(n).padStart(2, '0');
+        const local = `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+        updates.scheduledAt = local;
+      }
+    }
+
+    if (Object.keys(updates).length > 0) {
+      setForm(f => ({ ...f, ...updates }));
+    }
+  }, []);
 
   return (
     <div className="container mx-auto p-4">
@@ -31,6 +61,11 @@ const CreateSession = () => {
         {error && <div className="text-red-600">{error}</div>}
         <button className="py-2 px-4 bg-primary text-white rounded" disabled={loading}>{loading ? 'Creating...' : 'Create'}</button>
       </form>
+
+      <div className="mt-6 p-3 border rounded bg-muted/30 max-w-lg">
+        <div className="text-sm font-medium">Debug — query params & form state</div>
+        <pre className="text-xs mt-2 whitespace-pre-wrap">{JSON.stringify({ query: window.location.search, form }, null, 2)}</pre>
+      </div>
     </div>
   );
 };

@@ -17,6 +17,16 @@ export interface Session {
 
 export const sessionService = {
   getAllSessions: (): Promise<Session[]> => apiClient.get<Session[]>('/sessions'),
+  getSessions: (query?: Record<string, any>): Promise<Session[]> => {
+    const params = new URLSearchParams();
+    if (query) {
+      Object.entries(query).forEach(([k, v]) => {
+        if (v !== undefined && v !== null) params.set(k, String(v));
+      });
+    }
+    const qs = params.toString();
+    return apiClient.get<Session[]>(`/sessions${qs ? `?${qs}` : ''}`);
+  },
   getSessionById: (id: string): Promise<Session> => apiClient.get<Session>(`/sessions/${id}`),
   createSession: (payload: any): Promise<Session> => apiClient.post<Session>('/sessions', payload),
   updateSession: (id: string, payload: any): Promise<Session> => apiClient.put<Session>(`/sessions/${id}`, payload),

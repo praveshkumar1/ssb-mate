@@ -50,6 +50,49 @@ router.get('/verified', async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/coaches/top-rated - Get top rated coaches (by rating and totalReviews)
+router.get('/top-rated', async (req: Request, res: Response) => {
+  try {
+    const { limit = 5 } = req.query;
+    const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
+
+    apiLogger.info('Fetching top-rated coaches', {
+      endpoint: '/api/coaches/top-rated',
+      ip: clientIP,
+      userAgent: req.get('User-Agent'),
+      limit
+    });
+
+    const limitNum = parseInt(limit as string) || 5;
+    const coaches = await User.find({ role: 'mentor', isActive: true })
+      .select('-password')
+      .sort({ rating: -1, totalReviews: -1 })
+      .limit(limitNum);
+
+    apiLogger.info(`Returning ${coaches.length} top-rated coaches`, {
+      endpoint: '/api/coaches/top-rated',
+      count: coaches.length,
+      ip: clientIP
+    });
+
+    return res.json({
+      success: true,
+      data: coaches,
+      count: coaches.length,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
+    apiLogger.error('Error fetching top-rated coaches', {
+      endpoint: '/api/coaches/top-rated',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      ip: clientIP,
+      userAgent: req.get('User-Agent')
+    });
+    return res.status(500).json({ success: false, error: 'Failed to fetch top-rated coaches' });
+  }
+});
+
 // GET /api/coaches/:id - Get coach by ID
 router.get('/:id', async (req: Request, res: Response) => {
   try {

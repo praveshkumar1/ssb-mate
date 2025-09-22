@@ -46,7 +46,7 @@ const SessionSchema: Schema = new Schema({
   },
   sessionType: {
     type: String,
-    enum: ['mock_interview', 'guidance', 'assessment', 'group_discussion', 'personal_interview'],
+    enum: ['mock_interview', 'guidance', 'assessment', 'group_discussion', 'personal_interview', 'general_mentoring'],
     required: true
   },
   scheduledAt: {

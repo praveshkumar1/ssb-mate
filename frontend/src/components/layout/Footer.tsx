@@ -15,7 +15,7 @@ import {
 
 const Footer = () => {
   return (
-    <footer className="bg-card border-t border-border">
+  <footer className="bg-card border-t border-border" role="contentinfo" aria-label="Footer">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         {/* Main Footer Content */}
         <div className="py-16">
@@ -29,19 +29,19 @@ const Footer = () => {
                 Connecting SSB aspirants with expert coaches and mentors. 
                 Your trusted partner in defence career success.
               </p>
-              <div className="flex space-x-4">
-                <Button variant="ghost" size="icon">
+              <div className="flex space-x-4" aria-label="Social media links">
+                <a href="https://twitter.com" aria-label="Twitter" className="focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-600 rounded-md">
                   <Twitter className="h-5 w-5" />
-                </Button>
-                <Button variant="ghost" size="icon">
+                </a>
+                <a href="https://facebook.com" aria-label="Facebook" className="focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-600 rounded-md">
                   <Facebook className="h-5 w-5" />
-                </Button>
-                <Button variant="ghost" size="icon">
+                </a>
+                <a href="https://instagram.com" aria-label="Instagram" className="focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-600 rounded-md">
                   <Instagram className="h-5 w-5" />
-                </Button>
-                <Button variant="ghost" size="icon">
+                </a>
+                <a href="https://linkedin.com" aria-label="LinkedIn" className="focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-600 rounded-md">
                   <Linkedin className="h-5 w-5" />
-                </Button>
+                </a>
               </div>
             </div>
 
@@ -50,7 +50,7 @@ const Footer = () => {
               <h4 className="text-lg font-semibold text-foreground">Quick Links</h4>
               <ul className="space-y-2">
                 <li>
-                  <a href="#coaches" className="text-muted-foreground hover:text-primary transition-smooth">
+                  <a href="#coaches" className="text-muted-foreground hover:text-primary transition-smooth" aria-label="Find Coaches">
                     Find Coaches
                   </a>
                 </li>
@@ -82,7 +82,7 @@ const Footer = () => {
               <h4 className="text-lg font-semibold text-foreground">Support</h4>
               <ul className="space-y-2">
                 <li>
-                  <a href="#help" className="text-muted-foreground hover:text-primary transition-smooth">
+                  <a href="#help" className="text-muted-foreground hover:text-primary transition-smooth" aria-label="Help Center">
                     Help Center
                   </a>
                 </li>
@@ -115,11 +115,11 @@ const Footer = () => {
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
                   <Mail className="h-5 w-5 text-primary" />
-                  <span className="text-muted-foreground">support@ssbacademy.com</span>
+                  <a className="text-muted-foreground underline-offset-2 hover:underline" href="mailto:support@ssbacademy.com">support@ssbacademy.com</a>
                 </div>
                 <div className="flex items-center gap-3">
                   <Phone className="h-5 w-5 text-primary" />
-                  <span className="text-muted-foreground">+91 98765 43210</span>
+                  <a className="text-muted-foreground underline-offset-2 hover:underline" href="tel:+919876543210">+91 98765 43210</a>
                 </div>
                 <div className="flex items-center gap-3">
                   <MapPin className="h-5 w-5 text-primary" />
