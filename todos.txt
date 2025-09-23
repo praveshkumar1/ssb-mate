@@ -1,3 +1,19 @@
 Replace disk uploads with S3 or GCS + signed uploads. I can implement an endpoint that returns a signed URL for direct client upload so the server doesn't proxy file bytes.
 
 Avoid GET for State-Changing Requests: Sensitive actions should not use GET requests, as these can be easily exploited via malicious URLs
+1. Cookie security considerations:
+
+
+authmiddleware: 
+You’re parsing the cookie manually from the cookie header string.
+
+Recommendation: Use a dedicated cookie parsing middleware like cookie-parser
+ in Express to avoid parsing mistakes and edge cases.
+
+Make sure the session cookie is:
+
+HttpOnly: prevents JavaScript access.
+
+Secure: only sent over HTTPS.
+
+SameSite: set to Strict or Lax to prevent CSRF.
