@@ -38,7 +38,11 @@ export const authService = {
   // Check if user is authenticated
   isAuthenticated: (): boolean => {
     const token = localStorage.getItem('token');
-    return !!token;
+    if (token) return true;
+    // If using cookie-based sessions the server may set HttpOnly cookie and the client
+    // won't have a token. Treat presence of a stored user as authenticated.
+    const user = authService.getCurrentUser();
+    return !!user;
   },
 
   // Check if user is a mentor

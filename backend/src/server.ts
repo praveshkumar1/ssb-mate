@@ -10,6 +10,7 @@ import { notFoundHandler } from './middleware/notFoundHandler';
 import { requestLogger, errorLogger } from './middleware/requestLogger';
 import { connectDatabase } from './database/connection';
 import { seedDatabase } from './database/seed';
+import { csrfProtection } from './middleware/csrf';
 
 // Import routes
 import testRoutes from './routes/testRoutes';
@@ -60,7 +61,12 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    process.env.CSRF_HEADER_NAME || 'x-csrf-token',
+    'x-requested-with'
+  ],
 }));
 
 app.use(express.json({ limit: '10mb' }));
@@ -155,6 +161,9 @@ app.use('/api/users', userRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/sessions', sessionRoutes);
 app.use('/api/resources', resourceRoutes);
+
+// CSRF protection for state-changing requests (reads cookie header and validates header token)
+app.use(csrfProtection);
 
 // 404 handler
 app.use(notFoundHandler);

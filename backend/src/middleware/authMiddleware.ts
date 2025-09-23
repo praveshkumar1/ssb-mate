@@ -32,11 +32,26 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
     const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
     const userAgent = req.get('User-Agent') || 'unknown';
     
-    // Get token from Authorization header
+    // Get token from Authorization header or from HttpOnly cookie
     const authHeader = req.headers.authorization;
-    const token = authHeader && authHeader.startsWith('Bearer ') 
+    let token = authHeader && authHeader.startsWith('Bearer ') 
       ? authHeader.substring(7) 
       : null;
+
+    // If no Authorization header, check cookies header for session cookie
+    if (!token) {
+      const cookieHeader = req.headers.cookie;
+      const cookieName = process.env.SESSION_COOKIE_NAME || 'ssb_token';
+      if (cookieHeader) {
+        const cookies = cookieHeader.split(';').map(c => c.trim());
+        for (const c of cookies) {
+          if (c.startsWith(cookieName + '=')) {
+            token = c.substring((cookieName + '=').length);
+            break;
+          }
+        }
+      }
+    }
 
     if (!token) {
       authLogger.warn('Authentication attempted without token', {

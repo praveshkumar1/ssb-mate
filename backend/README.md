@@ -56,7 +56,7 @@ JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
 JWT_EXPIRES_IN=24h
 
 # API Configuration
-CORS_ORIGIN=http://localhost:5173
+CORS_ORIGIN=http://localhost:9000
 ```
 
 ### 3. Database Setup
@@ -182,6 +182,6 @@ src/
 The backend is configured to work with the React frontend. Make sure both are running:
 
 - Backend: `http://localhost:8080`
-- Frontend: `http://localhost:5173`
+- Frontend: `http://localhost:9000`
 
 The frontend should automatically connect to the backend API endpoints.

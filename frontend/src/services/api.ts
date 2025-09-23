@@ -13,8 +13,11 @@ class ApiClient {
   async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
     
-    // Get auth token if available
-    const token = localStorage.getItem('token');
+  // Get auth token if available
+  const token = localStorage.getItem('token');
+
+  // Ensure cookies are sent so server can read session cookie and csrf cookie
+  const defaultCredentials = 'include' as RequestCredentials;
     
     // Build headers carefully so options.headers can't accidentally remove Authorization
     // If the body is FormData, let the browser set the Content-Type (with boundary) and don't set it here.
@@ -22,6 +25,19 @@ class ApiClient {
       ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     };
+
+    // For unsafe methods, include CSRF header using double-submit cookie pattern
+    const unsafeMethods = ['POST', 'PUT', 'DELETE', 'PATCH'];
+    const method = (options.method || 'GET').toUpperCase();
+    if (unsafeMethods.includes(method)) {
+      // Try to read the CSRF cookie (default name 'ssb_csrf' or override via env)
+      const csrfCookieName = (import.meta.env.VITE_CSRF_COOKIE_NAME as string) || 'ssb_csrf';
+      const cookieValue = document.cookie.split(';').map(s => s.trim()).find(c => c.startsWith(`${csrfCookieName}=`));
+      const csrfToken = cookieValue ? cookieValue.split('=')[1] : null;
+      if (csrfToken) {
+        defaultHeaders[(import.meta.env.VITE_CSRF_HEADER_NAME as string) || 'x-csrf-token'] = decodeURIComponent(csrfToken);
+      }
+    }
 
     // Normalize incoming headers (could be Headers, object, or undefined)
     const incomingHeaders: Record<string, string> = {};
@@ -37,6 +53,8 @@ class ApiClient {
     const config: RequestInit = {
       ...options,
       headers: mergedHeaders,
+      // ensure cookies (session + csrf) are sent with requests
+      credentials: (options.credentials as RequestCredentials) || defaultCredentials,
     };
 
     // (debug logs removed)
@@ -47,10 +65,38 @@ class ApiClient {
       const data = await response.json();
       
       if (!response.ok) {
-        const err: any = new Error(data.error || data.message || `HTTP error! status: ${response.status}`);
-        err.status = response.status;
-        err.data = data;
-        throw err;
+            // If CSRF middleware blocks the request, clear client auth state and redirect to login
+            if (response.status === 403 && (data && (data.error === 'Invalid CSRF token' || data.message === 'Invalid CSRF token'))) {
+              try {
+                // best-effort: clear local auth and navigate to login
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                try {
+                  // show a toast if available and set a short-lived session flag so login page can display a message
+                  // Note: import meta can't be used here; use global toast if available
+                  // Set a session flag the login page can read
+                  sessionStorage.setItem('auth:reason', 'session_expired_csrf');
+                } catch (e) {
+                  // ignore
+                }
+                // show an inline toast if the global toast helper is exposed
+                try {
+                  // eslint-disable-next-line @typescript-eslint/no-var-requires
+                  const { toast } = require('@/hooks/use-toast');
+                  if (toast) toast({ title: 'Session expired', description: 'Please sign in again' });
+                } catch (e) {
+                  // ignore failures to load toast
+                }
+                window.location.href = '/login';
+              } catch (e) {
+                // ignore
+              }
+            }
+            
+            const err: any = new Error(data.error || data.message || `HTTP error! status: ${response.status}`);
+            err.status = response.status;
+            err.data = data;
+            throw err;
       }
       
       // Return the data from the response for successful requests

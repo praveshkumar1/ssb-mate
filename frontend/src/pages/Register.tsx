@@ -14,6 +14,19 @@ const Register = () => {
   const navigate = useNavigate();
   const auth = useAuth();
 
+  // Show friendly message if redirected due to CSRF/session expiry
+  useState(() => {
+    try {
+      const reason = sessionStorage.getItem('auth:reason');
+      if (reason === 'session_expired_csrf') {
+        toast({ title: 'Session expired', description: 'Please sign in again' });
+        sessionStorage.removeItem('auth:reason');
+      }
+    } catch (e) {
+      // ignore
+    }
+  });
+
   const handleChange = (k: string, v: any) => setForm(prev => ({ ...prev, [k]: v }));
 
   const submit = async (e: React.FormEvent) => {

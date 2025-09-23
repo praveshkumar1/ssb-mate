@@ -21,6 +21,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Dashboard from './pages/Dashboard';
 import ManageSessions from './pages/ManageSessions';
 import MentorOnboarding from './pages/MentorOnboarding';
+import AuthSuccess from './pages/AuthSuccess';
 
 const queryClient = new QueryClient();
 
@@ -47,6 +48,7 @@ const App = () => (
           <Route path="/dashboard/sessions" element={<ProtectedRoute><DashboardSessions /></ProtectedRoute>} />
           <Route path="/dashboard/manage-sessions" element={<ProtectedRoute><ManageSessions /></ProtectedRoute>} />
           <Route path="/onboard/mentor" element={<ProtectedRoute><MentorOnboarding /></ProtectedRoute>} />
+          <Route path="/auth/success" element={<AuthSuccess />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

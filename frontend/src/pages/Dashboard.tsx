@@ -161,7 +161,8 @@ const Dashboard = () => {
                       <div className="text-sm">Experience: <span className="font-semibold">{profile?.experience ? `${profile.experience} yrs` : 'Not set'}</span></div>
                       <div className="text-sm">Total sessions: <span className="font-semibold">{sessions.filter(s => String(s.mentorId) === String(profile._id)).length}</span></div>
                       <div className="text-sm">Rating: <span className="font-semibold">{profile?.rating ?? 0} / 5</span></div>
-                      <div className="text-sm">Bookings: <span className="font-semibold">{stats?.totalBookings ?? '-'}</span></div>
+                        <div className="text-sm text-muted-foreground">{profile?.education || ''}</div>
+                        {profile?.email && <div className="text-xs text-muted-foreground">{profile.email}</div>}
                       <div className="text-sm">Completed: <span className="font-semibold">{stats?.completed ?? '-'}</span></div>
                       <div className="text-sm">Revenue: <span className="font-semibold">${stats?.revenue ?? '0.00'}</span></div>
                       <div>

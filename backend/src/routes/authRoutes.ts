@@ -5,8 +5,229 @@ import { body, validationResult } from 'express-validator';
 import User from '../models/User';
 import { logger, authLogger, securityLogger } from '../utils/logger';
 import { hash } from 'crypto';
+import fetch from 'node-fetch';
+import jwtDecode from 'jwt-decode';
+import { encryptText, decryptText } from '../utils/crypto';
+import { CSRF_COOKIE_NAME, CSRF_HEADER_NAME } from '../middleware/csrf';
+import crypto from 'crypto';
 
 const router = Router();
+
+// Helper: create or update user from Google profile info
+async function upsertGoogleUser(profile: any) {
+  const email = profile.email;
+  let user = await User.findOne({ email });
+  if (!user) {
+    // create a placeholder password to satisfy schema; mark verified
+    const randomPassword = Math.random().toString(36).slice(2, 10) + 'G';
+    const hashed = await bcrypt.hash(randomPassword, 10);
+    user = new User({
+      email,
+      password: hashed,
+      firstName: profile.given_name || profile.firstName || '',
+      lastName: profile.family_name || profile.lastName || '',
+      profileImageUrl: profile.picture || profile.pictureUrl,
+      isVerified: true,
+      role: 'mentee'
+    });
+    await user.save();
+  } else {
+    // update picture/name if changed
+    const updates: any = {};
+    if (profile.given_name && profile.given_name !== user.firstName) updates.firstName = profile.given_name;
+    if (profile.family_name && profile.family_name !== user.lastName) updates.lastName = profile.family_name;
+    if (profile.picture && profile.picture !== user.profileImageUrl) updates.profileImageUrl = profile.picture;
+    if (Object.keys(updates).length) {
+      await User.findByIdAndUpdate(user._id, { $set: updates });
+      user = await User.findById(user._id);
+    }
+  }
+  return user;
+}
+
+// GET /api/auth/google/url - optional helper to return authorization URL
+router.get('/google/url', (req: Request, res: Response) => {
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const redirectUri = process.env.GOOGLE_REDIRECT_URI || `${process.env.APP_BASE_URL || 'http://localhost:8080'}/api/auth/google/callback`;
+  const params = new URLSearchParams({
+    client_id: clientId || '',
+    redirect_uri: redirectUri,
+    response_type: 'code',
+    scope: 'openid profile email',
+    access_type: 'offline',
+    prompt: 'consent'
+  });
+  return res.json({ success: true, url: `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}` });
+});
+
+// GET /api/auth/google/callback - exchange code for tokens and sign-in
+router.get('/google/callback', async (req: Request, res: Response) => {
+  try {
+    const code = req.query.code as string;
+    if (!code) return res.status(400).json({ success: false, error: 'Missing code' });
+
+    const tokenUrl = 'https://oauth2.googleapis.com/token';
+    const params = new URLSearchParams();
+    params.append('code', code);
+    params.append('client_id', process.env.GOOGLE_CLIENT_ID || '');
+    params.append('client_secret', process.env.GOOGLE_CLIENT_SECRET || '');
+    params.append('redirect_uri', process.env.GOOGLE_REDIRECT_URI || `${process.env.APP_BASE_URL || 'http://localhost:8080'}/api/auth/google/callback`);
+    params.append('grant_type', 'authorization_code');
+
+    const tokenResp = await fetch(tokenUrl, { method: 'POST', body: params });
+    const tokenJson = await tokenResp.json();
+    const { id_token, access_token, refresh_token } = tokenJson;
+    if (!id_token) return res.status(500).json({ success: false, error: 'No id_token in token response', tokenJson });
+
+    // decode id_token
+    const decoded: any = jwtDecode(id_token);
+    const profile = {
+      email: decoded.email,
+      given_name: decoded.given_name || decoded.givenName,
+      family_name: decoded.family_name || decoded.familyName,
+      picture: decoded.picture,
+      sub: decoded.sub,
+      name: decoded.name
+    };
+
+    // create or update user
+    const user = await upsertGoogleUser(decoded);
+    if (!user) {
+      return res.status(500).json({ success: false, error: 'Failed to create or fetch user' });
+    }
+
+    // persist google refresh token if provided (store server-side, encrypted)
+    if (refresh_token) {
+      try {
+        const enc = encryptText(refresh_token);
+        await User.findByIdAndUpdate(user._id, { $set: { googleRefreshToken: enc, googleId: decoded.sub } });
+      } catch (e) {
+        logger.warn('Could not persist google refresh token', e);
+      }
+    }
+
+    // issue our app JWT
+    const appToken = jwt.sign({ userId: user._id, email: user.email, role: user.role }, process.env.JWT_SECRET || 'fallback-secret', { expiresIn: process.env.JWT_EXPIRES_IN || '24h' });
+
+    // Set HttpOnly cookie with app JWT for session authentication
+    const cookieName = process.env.SESSION_COOKIE_NAME || 'ssb_token';
+    const cookieOptions: any = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: (process.env.JWT_EXPIRES_SECONDS ? parseInt(process.env.JWT_EXPIRES_SECONDS) : 24 * 60 * 60) * 1000
+    };
+    res.cookie(cookieName, appToken, cookieOptions);
+
+    // Generate a CSRF double-submit token and set it as a non-HttpOnly cookie so the browser JS can read it
+    try {
+      const csrfToken = crypto.randomBytes(32).toString('hex');
+      const csrfCookieOptions: any = {
+        httpOnly: false,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: cookieOptions.maxAge
+      };
+      res.cookie(CSRF_COOKIE_NAME, encodeURIComponent(csrfToken), csrfCookieOptions);
+    } catch (e) {
+      logger.warn('Failed to set CSRF cookie', e);
+    }
+
+  // For web flow, redirect back to frontend. Cookie holds the app JWT; do not include tokens in query for security.
+  const frontendRedirect = process.env.FRONTEND_URL || 'http://localhost:9000';
+  return res.redirect(`${frontendRedirect}/auth/success`);
+  } catch (error) {
+    logger.error('Google callback error', error);
+    return res.status(500).json({ success: false, error: 'Google callback failed' });
+  }
+});
+
+// POST /api/auth/refresh - exchange refresh_token for new access token
+router.post('/refresh', async (req: Request, res: Response) => {
+  try {
+    const { refresh_token } = req.body;
+    if (!refresh_token) return res.status(400).json({ success: false, error: 'Missing refresh_token' });
+
+    const tokenUrl = 'https://oauth2.googleapis.com/token';
+    const params = new URLSearchParams();
+    params.append('client_id', process.env.GOOGLE_CLIENT_ID || '');
+    params.append('client_secret', process.env.GOOGLE_CLIENT_SECRET || '');
+    params.append('refresh_token', refresh_token);
+    params.append('grant_type', 'refresh_token');
+
+    const tokenResp = await fetch(tokenUrl, { method: 'POST', body: params });
+    const tokenJson = await tokenResp.json();
+    const { access_token, id_token } = tokenJson;
+
+    return res.json({ success: true, data: { access_token, id_token } });
+  } catch (error) {
+    logger.error('Refresh token error', error);
+    return res.status(500).json({ success: false, error: 'Failed to refresh token' });
+  }
+});
+
+// POST /api/auth/refresh-session - uses stored googleRefreshToken to refresh Google token and issue new app JWT
+import { authenticateToken } from '../middleware/auth';
+
+router.post('/refresh-session', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const currentUser: any = (req as any).user;
+    const userId = currentUser?._id ?? currentUser?.userId;
+    if (!userId) return res.status(401).json({ success: false, error: 'Authentication required' });
+
+    const user = await User.findById(userId).select('+googleRefreshToken');
+    if (!user || !user.googleRefreshToken) return res.status(400).json({ success: false, error: 'No refresh token available' });
+
+    let refreshTokenPlain: string;
+    try {
+      refreshTokenPlain = decryptText(user.googleRefreshToken);
+    } catch (e) {
+      logger.error('Failed to decrypt googleRefreshToken', e);
+      return res.status(500).json({ success: false, error: 'Token decrypt failed' });
+    }
+
+    const tokenUrl = 'https://oauth2.googleapis.com/token';
+    const params = new URLSearchParams();
+    params.append('client_id', process.env.GOOGLE_CLIENT_ID || '');
+    params.append('client_secret', process.env.GOOGLE_CLIENT_SECRET || '');
+    params.append('refresh_token', refreshTokenPlain);
+    params.append('grant_type', 'refresh_token');
+
+    const tokenResp = await fetch(tokenUrl, { method: 'POST', body: params });
+    const tokenJson = await tokenResp.json();
+    const { access_token, id_token, refresh_token: newRefreshToken } = tokenJson;
+
+    // If Google returned a new refresh token, persist (encrypted)
+    if (newRefreshToken) {
+      try {
+        const enc = encryptText(newRefreshToken);
+        await User.findByIdAndUpdate(user._id, { $set: { googleRefreshToken: enc } });
+      } catch (e) {
+        logger.warn('Could not update googleRefreshToken', e);
+      }
+    }
+
+    // issue a new app JWT
+    const appToken = jwt.sign({ userId: user._id, email: user.email, role: user.role }, process.env.JWT_SECRET || 'fallback-secret', { expiresIn: process.env.JWT_EXPIRES_IN || '24h' });
+
+    // set cookie
+    const cookieName = process.env.SESSION_COOKIE_NAME || 'ssb_token';
+    res.cookie(cookieName, appToken, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax' });
+
+    // rotate CSRF token as well
+    try {
+      const csrfToken = crypto.randomBytes(32).toString('hex');
+      res.cookie(CSRF_COOKIE_NAME, encodeURIComponent(csrfToken), { httpOnly: false, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: (process.env.JWT_EXPIRES_SECONDS ? parseInt(process.env.JWT_EXPIRES_SECONDS) : 24 * 60 * 60) * 1000 });
+    } catch (e) {
+      logger.warn('Failed to set CSRF cookie', e);
+    }
+
+    return res.json({ success: true, data: { access_token, id_token } });
+  } catch (error) {
+    logger.error('Refresh session failed', error);
+    return res.status(500).json({ success: false, error: 'Failed to refresh session' });
+  }
+});
 
 // Registration validation rules
 const registerValidation = [
@@ -164,6 +385,27 @@ router.post('/register', registerValidation, async (req: Request, res: Response)
     // Remove password from response
     const userResponse = newUser.toJSON();
 
+    // Also set session cookie + CSRF cookie for cookie-based auth
+    try {
+      const cookieName = process.env.SESSION_COOKIE_NAME || 'ssb_token';
+      const cookieOptions: any = {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: (process.env.JWT_EXPIRES_SECONDS ? parseInt(process.env.JWT_EXPIRES_SECONDS) : 24 * 60 * 60) * 1000
+      };
+      res.cookie(cookieName, token, cookieOptions);
+      // set CSRF cookie (non-HttpOnly) so client JS can read and send header
+      try {
+        const csrfToken = crypto.randomBytes(32).toString('hex');
+        res.cookie(CSRF_COOKIE_NAME, encodeURIComponent(csrfToken), { httpOnly: false, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: cookieOptions.maxAge });
+      } catch (e) {
+        logger.warn('Failed to set CSRF cookie on register', e);
+      }
+    } catch (e) {
+      logger.warn('Failed to set session cookie on register', e);
+    }
+
     return res.status(201).json({
       success: true,
       message: 'User registered successfully',
@@ -275,6 +517,26 @@ router.post('/login', loginValidation, async (req: Request, res: Response) => {
 
     // Remove password from response
     const userResponse = user.toJSON();
+
+    // Also set session cookie + CSRF cookie for cookie-based auth
+    try {
+      const cookieName = process.env.SESSION_COOKIE_NAME || 'ssb_token';
+      const cookieOptions: any = {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: (process.env.JWT_EXPIRES_SECONDS ? parseInt(process.env.JWT_EXPIRES_SECONDS) : 24 * 60 * 60) * 1000
+      };
+      res.cookie(cookieName, token, cookieOptions);
+      try {
+        const csrfToken = crypto.randomBytes(32).toString('hex');
+        res.cookie(CSRF_COOKIE_NAME, encodeURIComponent(csrfToken), { httpOnly: false, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: cookieOptions.maxAge });
+      } catch (e) {
+        logger.warn('Failed to set CSRF cookie on login', e);
+      }
+    } catch (e) {
+      logger.warn('Failed to set session cookie on login', e);
+    }
 
     return res.json({
       success: true,

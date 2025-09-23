@@ -6,6 +6,7 @@ import { toast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
+import GoogleSignInButton from '@/components/GoogleSignInButton';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -15,6 +16,19 @@ const Login = () => {
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
   const auth = useAuth();
+
+  // Show friendly message if redirected due to CSRF/session expiry
+  useState(() => {
+    try {
+      const reason = sessionStorage.getItem('auth:reason');
+      if (reason === 'session_expired_csrf') {
+        toast({ title: 'Session expired', description: 'Please sign in again' });
+        sessionStorage.removeItem('auth:reason');
+      }
+    } catch (e) {
+      // ignore
+    }
+  });
 
   const validate = () => {
     if (!email || !email.includes('@')) return 'Please enter a valid email address.';
@@ -88,8 +102,9 @@ const Login = () => {
           </div>
         </form>
 
-        <div className="mt-6 text-center text-sm text-muted-foreground">
-          New here? <Link to="/register" className="text-primary font-medium hover:underline">Create an account</Link>
+        <div className="mt-6 flex flex-col gap-3">
+          <GoogleSignInButton className="mx-auto" />
+          <div className="text-center text-sm text-muted-foreground">New here? <Link to="/register" className="text-primary font-medium hover:underline">Create an account</Link></div>
         </div>
       </section>
     </main>

@@ -23,6 +23,8 @@ export interface IUser extends Document {
   totalReviews?: number;
   location?: string;
   profileImageUrl?: string;
+  googleId?: string;
+  googleRefreshToken?: string;
   certifications: string[];
   sportsPlayed: string[];
   createdAt: Date;
@@ -119,6 +121,16 @@ const UserSchema: Schema = new Schema({
     trim: true
   },
   profileImageUrl: {
+    type: String,
+    trim: true
+  },
+  googleId: {
+    type: String,
+    trim: true,
+    index: true,
+    sparse: true
+  },
+  googleRefreshToken: {
     type: String,
     trim: true
   },
