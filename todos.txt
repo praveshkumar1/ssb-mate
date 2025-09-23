@@ -1,1 +1,3 @@
 Replace disk uploads with S3 or GCS + signed uploads. I can implement an endpoint that returns a signed URL for direct client upload so the server doesn't proxy file bytes.
+
+Avoid GET for State-Changing Requests: Sensitive actions should not use GET requests, as these can be easily exploited via malicious URLs
