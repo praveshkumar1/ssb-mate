@@ -1,0 +1,18 @@
+# Render.com deployment config for backend
+version: 2
+services:
+  - type: web
+    name: ssb-connect-backend
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: cd backend && npm install && npm run build
+    startCommand: cd backend && npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+    # Add your other env vars in Render dashboard:
+    # MONGODB_URI, JWT_SECRET, MAILGUN_API_KEY, etc.
