@@ -122,7 +122,7 @@ router.get('/google/callback', async (req: Request, res: Response) => {
     const cookieOptions: any = {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: (process.env.JWT_EXPIRES_SECONDS ? parseInt(process.env.JWT_EXPIRES_SECONDS) : 24 * 60 * 60) * 1000
     };
     res.cookie(cookieName, appToken, cookieOptions);
@@ -133,7 +133,7 @@ router.get('/google/callback', async (req: Request, res: Response) => {
       const csrfCookieOptions: any = {
         httpOnly: false,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
         maxAge: cookieOptions.maxAge
       };
       res.cookie(CSRF_COOKIE_NAME, encodeURIComponent(csrfToken), csrfCookieOptions);
@@ -151,7 +151,7 @@ router.get('/google/callback', async (req: Request, res: Response) => {
     }
 
     // For web flow, redirect back to frontend. Cookie holds the app JWT; do not include tokens in query for security.
-  const frontendRedirect = process.env.FRONTEND_URL || 'http://localhost:9000';
+  const frontendRedirect = process.env.FRONTEND_URL || process.env.CORS_ORIGIN || 'http://localhost:9000';
   // If this was a new user creation, include a created flag so frontend can route to role-selection/onboarding
   const createdFlag = created ? '?created=1' : '';
   return res.redirect(`${frontendRedirect}/auth/success${createdFlag}`);
@@ -230,13 +230,13 @@ router.post('/refresh-session', authenticateToken, async (req: Request, res: Res
     const appToken = jwt.sign({ userId: user._id, email: user.email, role: user.role }, process.env.JWT_SECRET || 'fallback-secret', { expiresIn: process.env.JWT_EXPIRES_IN || '24h' });
 
     // set cookie
-    const cookieName = process.env.SESSION_COOKIE_NAME || 'ssb_token';
-    res.cookie(cookieName, appToken, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax' });
+  const cookieName = process.env.SESSION_COOKIE_NAME || 'ssb_token';
+  res.cookie(cookieName, appToken, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax' });
 
     // rotate CSRF token as well
     try {
       const csrfToken = crypto.randomBytes(32).toString('hex');
-      res.cookie(CSRF_COOKIE_NAME, encodeURIComponent(csrfToken), { httpOnly: false, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: (process.env.JWT_EXPIRES_SECONDS ? parseInt(process.env.JWT_EXPIRES_SECONDS) : 24 * 60 * 60) * 1000 });
+  res.cookie(CSRF_COOKIE_NAME, encodeURIComponent(csrfToken), { httpOnly: false, secure: process.env.NODE_ENV === 'production', sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', maxAge: (process.env.JWT_EXPIRES_SECONDS ? parseInt(process.env.JWT_EXPIRES_SECONDS) : 24 * 60 * 60) * 1000 });
     } catch (e) {
       logger.warn('Failed to set CSRF cookie', e);
     }
@@ -410,14 +410,14 @@ router.post('/register', registerValidation, async (req: Request, res: Response)
       const cookieOptions: any = {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
         maxAge: (process.env.JWT_EXPIRES_SECONDS ? parseInt(process.env.JWT_EXPIRES_SECONDS) : 24 * 60 * 60) * 1000
       };
       res.cookie(cookieName, token, cookieOptions);
       // set CSRF cookie (non-HttpOnly) so client JS can read and send header
       try {
         const csrfToken = crypto.randomBytes(32).toString('hex');
-        res.cookie(CSRF_COOKIE_NAME, encodeURIComponent(csrfToken), { httpOnly: false, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: cookieOptions.maxAge });
+  res.cookie(CSRF_COOKIE_NAME, encodeURIComponent(csrfToken), { httpOnly: false, secure: process.env.NODE_ENV === 'production', sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', maxAge: cookieOptions.maxAge });
       } catch (e) {
         logger.warn('Failed to set CSRF cookie on register', e);
       }
@@ -543,13 +543,13 @@ router.post('/login', loginValidation, async (req: Request, res: Response) => {
       const cookieOptions: any = {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
         maxAge: (process.env.JWT_EXPIRES_SECONDS ? parseInt(process.env.JWT_EXPIRES_SECONDS) : 24 * 60 * 60) * 1000
       };
       res.cookie(cookieName, token, cookieOptions);
       try {
         const csrfToken = crypto.randomBytes(32).toString('hex');
-        res.cookie(CSRF_COOKIE_NAME, encodeURIComponent(csrfToken), { httpOnly: false, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: cookieOptions.maxAge });
+  res.cookie(CSRF_COOKIE_NAME, encodeURIComponent(csrfToken), { httpOnly: false, secure: process.env.NODE_ENV === 'production', sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', maxAge: cookieOptions.maxAge });
       } catch (e) {
         logger.warn('Failed to set CSRF cookie on login', e);
       }
