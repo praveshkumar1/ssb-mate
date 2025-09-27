@@ -1,1 +1,48 @@
 Replace disk uploads with S3 or GCS + signed uploads. I can implement an endpoint that returns a signed URL for direct client upload so the server doesn't proxy file bytes.
+
+
+Avoid GET for State-Changing Requests: Sensitive actions should not use GET requests, as these can be easily exploited via malicious URLs
+1. Cookie security considerations:
+
+
+-------->>>>>>>>>>authmiddleware: 
+
+You’re parsing the cookie manually from the cookie header string.
+
+Recommendation: Use a dedicated cookie parsing middleware like cookie-parser
+ in Express to avoid parsing mistakes and edge cases.
+
+Make sure the session cookie is:
+
+HttpOnly: prevents JavaScript access.
+
+Secure: only sent over HTTPS.
+
+SameSite: set to Strict or Lax to prevent CSRF.
+
+---->>>>>>> preventing overleafing between the logs :
+
+Use AsyncLocalStorage for automatic context propagation
+
+One of the best modern ways to keep context for each request, even through async calls, is Node.js’s built-in AsyncLocalStorage (available since Node 12+).
+
+Example:
+
+const { AsyncLocalStorage } = require('async_hooks');
+const asyncLocalStorage = new AsyncLocalStorage();
+
+app.use((req, res, next) => {
+  asyncLocalStorage.run(new Map(), () => {
+    asyncLocalStorage.getStore().set('requestId', req.id);
+    next();
+  });
+});
+
+function log(message) {
+  const store = asyncLocalStorage.getStore();
+  const requestId = store ? store.get('requestId') : 'no-request-id';
+  console.log(`[${requestId}] ${message}`);
+}
+
+
+Now any code within the request lifecycle can call log() and it will automatically include the right requestId without passing it explicitly.
