@@ -24,7 +24,7 @@ import resourceRoutes from './routes/resourceRoutes';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 8080;
+const PORT = parseInt(process.env.PORT || '8080');
 
 // Rate limiting
 const limiter = rateLimit({
@@ -186,12 +186,12 @@ const startServer = async () => {
       process.exit(1);
     }
 
-    // Start the server
-    app.listen(PORT, () => {
+    // Start the server - bind to 0.0.0.0 for cloud deployment
+    app.listen(PORT, '0.0.0.0', () => {
       logger.info(`🚀 Server is running on port ${PORT}`);
       logger.info(`📱 Environment: ${process.env.NODE_ENV || 'development'}`);
       logger.info(`🌐 CORS Allowed Origins: ${allowedOrigins.join(', ')}`);
-      logger.info(`📊 Health check: http://localhost:${PORT}/health`);
+      logger.info(`📊 Health check: http://0.0.0.0:${PORT}/health`);
     });
   } catch (error) {
     logger.error('Failed to start server:', error);
