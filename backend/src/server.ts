@@ -40,20 +40,18 @@ app.use(helmet());
 app.use(compression());
 app.use(limiter);
 
-// CORS configuration
-const allowedOrigins = [
-  'http://localhost:5173',
-  'http://localhost:8081',
-  'http://localhost:8082',
-  process.env.CORS_ORIGIN
-].filter(Boolean);
+// CORS configuration (single origin only via env)
+const normalizeOrigin = (s?: string) => (s || '').replace(/\/$/, '');
+const configuredOrigin = normalizeOrigin(process.env.CORS_ORIGIN);
+const allowedOrigins = [configuredOrigin].filter(Boolean);
 
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
-    if (allowedOrigins.includes(origin)) {
+    const reqOrigin = normalizeOrigin(origin);
+    if (allowedOrigins.includes(reqOrigin)) {
       return callback(null, true);
     } else {
       return callback(new Error('Not allowed by CORS'));
