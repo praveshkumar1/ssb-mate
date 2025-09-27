@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { logger } from './logger';
 
 const ALGORITHM = 'aes-256-gcm';
 
@@ -6,7 +7,12 @@ function getKeyFromEnv(): Buffer | null {
   const k = process.env.REFRESH_TOKEN_ENC_KEY;
   if (!k) return null;
   // Expect base64 encoded 32 bytes
-  return Buffer.from(k, 'base64');
+  const buf = Buffer.from(k, 'base64');
+  if (buf.length !== 32) {
+    logger?.warn?.('REFRESH_TOKEN_ENC_KEY is not a valid 32-byte base64 key; skipping encryption');
+    return null;
+  }
+  return buf;
 }
 
 export function encryptText(plain: string): string | null {
@@ -23,7 +29,7 @@ export function encryptText(plain: string): string | null {
 
 export function decryptText(payloadB64: string): string {
   const key = getKeyFromEnv();
-  if (!key) throw new Error('REFRESH_TOKEN_ENC_KEY not set');
+  if (!key) throw new Error('REFRESH_TOKEN_ENC_KEY not set or invalid');
   const data = Buffer.from(payloadB64, 'base64');
   const iv = data.slice(0, 12);
   const tag = data.slice(12, 28);
