@@ -1,0 +1,1 @@
+{"environment":"development","error":"Invalid login: 535 Authentication failed","level":"error","message":"Failed to send email","service":"ssb-connect-backend","subject":"Test email from SSB Connect (Mailgun sandbox)","timestamp":"2025-09-24T03:42:53.210Z","to":"praveshunofficial@gmail.com","type":"api","version":"1.0.0"}

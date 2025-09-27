@@ -2,15 +2,16 @@ import crypto from 'crypto';
 
 const ALGORITHM = 'aes-256-gcm';
 
-function getKeyFromEnv(): Buffer {
+function getKeyFromEnv(): Buffer | null {
   const k = process.env.REFRESH_TOKEN_ENC_KEY;
-  if (!k) throw new Error('REFRESH_TOKEN_ENC_KEY not set');
+  if (!k) return null;
   // Expect base64 encoded 32 bytes
   return Buffer.from(k, 'base64');
 }
 
-export function encryptText(plain: string): string {
+export function encryptText(plain: string): string | null {
   const key = getKeyFromEnv();
+  if (!key) return null;
   const iv = crypto.randomBytes(12); // 96-bit for GCM
   const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
   const enc = Buffer.concat([cipher.update(plain, 'utf8'), cipher.final()]);
@@ -22,6 +23,7 @@ export function encryptText(plain: string): string {
 
 export function decryptText(payloadB64: string): string {
   const key = getKeyFromEnv();
+  if (!key) throw new Error('REFRESH_TOKEN_ENC_KEY not set');
   const data = Buffer.from(payloadB64, 'base64');
   const iv = data.slice(0, 12);
   const tag = data.slice(12, 28);

@@ -10,15 +10,19 @@ import jwtDecode from 'jwt-decode';
 import { encryptText, decryptText } from '../utils/crypto';
 import { CSRF_COOKIE_NAME, CSRF_HEADER_NAME } from '../middleware/csrf';
 import crypto from 'crypto';
+import { authenticateToken } from '../middleware/authMiddleware';
 
 const router = Router();
 
 // Helper: create or update user from Google profile info
+// Returns { user, created } where created is true if a new user was created
 async function upsertGoogleUser(profile: any) {
   const email = profile.email;
   let user = await User.findOne({ email });
+  let created = false;
   if (!user) {
-    // create a placeholder password to satisfy schema; mark verified
+    created = true;
+    // create a placeholder password to satisfy schema; mark verified=false so onboarding can verify
     const randomPassword = Math.random().toString(36).slice(2, 10) + 'G';
     const hashed = await bcrypt.hash(randomPassword, 10);
     user = new User({
@@ -27,7 +31,7 @@ async function upsertGoogleUser(profile: any) {
       firstName: profile.given_name || profile.firstName || '',
       lastName: profile.family_name || profile.lastName || '',
       profileImageUrl: profile.picture || profile.pictureUrl,
-      isVerified: true,
+      isVerified: false,
       role: 'mentee'
     });
     await user.save();
@@ -42,7 +46,7 @@ async function upsertGoogleUser(profile: any) {
       user = await User.findById(user._id);
     }
   }
-  return user;
+  return { user, created };
 }
 
 // GET /api/auth/google/url - optional helper to return authorization URL
@@ -91,7 +95,7 @@ router.get('/google/callback', async (req: Request, res: Response) => {
     };
 
     // create or update user
-    const user = await upsertGoogleUser(decoded);
+    const { user, created } = await upsertGoogleUser(decoded);
     if (!user) {
       return res.status(500).json({ success: false, error: 'Failed to create or fetch user' });
     }
@@ -100,7 +104,11 @@ router.get('/google/callback', async (req: Request, res: Response) => {
     if (refresh_token) {
       try {
         const enc = encryptText(refresh_token);
-        await User.findByIdAndUpdate(user._id, { $set: { googleRefreshToken: enc, googleId: decoded.sub } });
+        if (enc) {
+          await User.findByIdAndUpdate(user._id, { $set: { googleRefreshToken: enc, googleId: decoded.sub } });
+        } else {
+          logger.warn('REFRESH_TOKEN_ENC_KEY not set - skipping persisting google refresh token');
+        }
       } catch (e) {
         logger.warn('Could not persist google refresh token', e);
       }
@@ -129,18 +137,31 @@ router.get('/google/callback', async (req: Request, res: Response) => {
         maxAge: cookieOptions.maxAge
       };
       res.cookie(CSRF_COOKIE_NAME, encodeURIComponent(csrfToken), csrfCookieOptions);
+        // If we just created a new user via Google, set a short-lived non-HttpOnly cookie
+        // so the frontend can reliably detect and route them into the role-selection flow.
+        if (created) {
+          try {
+            res.cookie('ssb_new_user', '1', { httpOnly: false, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: 60 * 1000 });
+          } catch (e) {
+            logger.warn('Failed to set ssb_new_user cookie', e);
+          }
+        }
     } catch (e) {
       logger.warn('Failed to set CSRF cookie', e);
     }
 
-  // For web flow, redirect back to frontend. Cookie holds the app JWT; do not include tokens in query for security.
+    // For web flow, redirect back to frontend. Cookie holds the app JWT; do not include tokens in query for security.
   const frontendRedirect = process.env.FRONTEND_URL || 'http://localhost:9000';
-  return res.redirect(`${frontendRedirect}/auth/success`);
+  // If this was a new user creation, include a created flag so frontend can route to role-selection/onboarding
+  const createdFlag = created ? '?created=1' : '';
+  return res.redirect(`${frontendRedirect}/auth/success${createdFlag}`);
   } catch (error) {
     logger.error('Google callback error', error);
     return res.status(500).json({ success: false, error: 'Google callback failed' });
   }
 });
+
+// (Moved choose-role endpoint to userRoutes.ts so it lives under /api/users/choose-role)
 
 // POST /api/auth/refresh - exchange refresh_token for new access token
 router.post('/refresh', async (req: Request, res: Response) => {
@@ -167,8 +188,6 @@ router.post('/refresh', async (req: Request, res: Response) => {
 });
 
 // POST /api/auth/refresh-session - uses stored googleRefreshToken to refresh Google token and issue new app JWT
-import { authenticateToken } from '../middleware/auth';
-
 router.post('/refresh-session', authenticateToken, async (req: Request, res: Response) => {
   try {
     const currentUser: any = (req as any).user;

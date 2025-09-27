@@ -3,7 +3,7 @@ import { body, validationResult } from 'express-validator';
 import Session from '../models/Session';
 import User from '../models/User';
 import { logger, apiLogger } from '../utils/logger';
-import { authenticateToken } from '../middleware/auth';
+import { authenticateToken } from '../middleware/authMiddleware';
 
 const router = Router();
 
@@ -211,14 +211,42 @@ router.post('/', authenticateToken, [
       apiLogger.error('Failed to update mentor availability after booking', { endpoint: '/api/sessions', error: e instanceof Error ? e.message : e });
     }
 
-    // Log simulated emails to coach and mentee (actual mailing to be implemented separately)
+    // Send email notifications to coach and mentee (best-effort, non-blocking)
     try {
-  const coachEmail = (populatedSession?.mentorId as any)?.email || null;
-  const menteeEmail = (populatedSession?.menteeId as any)?.email || null;
-      apiLogger.info('Simulated email sent to coach (booking notification)', { endpoint: '/api/sessions', sessionId: newSession._id, to: coachEmail, subject: 'New session booked' });
-      apiLogger.info('Simulated email sent to mentee (booking confirmation)', { endpoint: '/api/sessions', sessionId: newSession._id, to: menteeEmail, subject: 'Session confirmation' });
+      if (!populatedSession) {
+        apiLogger.warn('Populated session missing after save; skipping email notifications', { endpoint: '/api/sessions', sessionId: newSession._id });
+      } else {
+        const ps: any = populatedSession as any;
+        const coachEmail = (ps?.mentorId as any)?.email || null;
+        const menteeEmail = (ps?.menteeId as any)?.email || null;
+        const sessionUrl = `${process.env.APP_URL || 'http://localhost:3000'}/sessions/${String(ps._id)}`;
+        const subjectToCoach = `New session booked by ${(ps?.menteeId as any)?.firstName || 'a user'}`;
+        const subjectToMentee = `Session confirmed with ${(ps?.mentorId as any)?.firstName || 'your mentor'}`;
+
+        const sessionDetailsText = `Title: ${ps.title}\nWhen: ${new Date(ps.scheduledAt).toLocaleString()}\nDuration: ${ps.duration} minutes\nNotes: ${ps.description || ''}\nLink: ${ps.meetingLink || ''}`;
+
+        // send asynchronously and don't block response
+        import('../utils/mailer').then(mailer => {
+          if (coachEmail) {
+            mailer.sendMail({
+              to: coachEmail,
+              subject: subjectToCoach,
+              text: `A new session was booked.\n\n${sessionDetailsText}`,
+              html: `<p>A new session was booked.</p><pre>${sessionDetailsText}</pre><p><a href="${sessionUrl}">View session</a></p>`
+            }).catch((e: any) => apiLogger.error('Coach email send failed', { error: e?.message || e }));
+          }
+          if (menteeEmail) {
+            mailer.sendMail({
+              to: menteeEmail,
+              subject: subjectToMentee,
+              text: `Your session is confirmed.\n\n${sessionDetailsText}`,
+              html: `<p>Your session is confirmed.</p><pre>${sessionDetailsText}</pre><p><a href="${sessionUrl}">View session</a></p>`
+            }).catch((e: any) => apiLogger.error('Mentee email send failed', { error: e?.message || e }));
+          }
+        }).catch((e: any) => apiLogger.error('Failed to load mailer module', { error: e?.message || e }));
+      }
     } catch (e) {
-      apiLogger.error('Failed to log simulated email notifications', { endpoint: '/api/sessions', error: e instanceof Error ? e.message : e });
+      apiLogger.error('Failed to enqueue email notifications', { endpoint: '/api/sessions', error: e instanceof Error ? e.message : e });
     }
 
     return res.status(201).json({

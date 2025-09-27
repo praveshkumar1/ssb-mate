@@ -1,8 +1,9 @@
 import { Router, Request, Response } from 'express';
+import { body, validationResult } from 'express-validator';
 import { logger, apiLogger } from '../utils/logger';
 import User from '../models/User';
 import Session from '../models/Session';
-import { authenticateToken } from '../middleware/auth';
+import { authenticateToken } from '../middleware/authMiddleware';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
@@ -128,7 +129,7 @@ router.put('/profile', authenticateToken, async (req: Request, res: Response) =>
     // Allow only a safe subset of fields to be updated
     const allowedFields = [
       'firstName', 'lastName', 'phoneNumber', 'bio', 'experience', 'specializations',
-      'rank', 'unit', 'achievements', 'hourlyRate', 'availability', 'location',
+      'education', 'rank', 'unit', 'achievements', 'hourlyRate', 'availability', 'location',
       'profileImageUrl', 'certifications', 'sportsPlayed'
     ];
 
@@ -258,6 +259,38 @@ router.get('/stats', authenticateToken, async (req: Request, res: Response) => {
   } catch (error) {
     logger.error('Error fetching user stats:', error);
     return res.status(500).json({ success: false, error: 'Failed to fetch stats' });
+  }
+});
+
+// POST /api/users/choose-role - set role for current authenticated user (mentor or mentee)
+router.post('/choose-role', authenticateToken, [
+  body('role').isIn(['mentor', 'mentee']).withMessage('Role must be mentor or mentee')
+], async (req: Request, res: Response) => {
+  try {
+    const currentUser: any = (req as any).user;
+    const userId = currentUser?._id ?? currentUser?.userId;
+    if (!userId) return res.status(401).json({ success: false, error: 'Authentication required' });
+
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ success: false, errors: errors.array() });
+
+    const { role } = req.body;
+    const updates: any = { role };
+    if (role === 'mentor') {
+      updates.isVerified = false;
+    } else {
+      updates.isVerified = true;
+    }
+
+    const user = await User.findByIdAndUpdate(userId, { $set: updates }, { new: true });
+    if (!user) return res.status(404).json({ success: false, error: 'User not found' });
+
+    apiLogger.info('User chose role', { userId, role });
+
+    return res.json({ success: true, data: { user } });
+  } catch (e) {
+    logger.error('Choose role error', e);
+    return res.status(500).json({ success: false, error: 'Failed to set role' });
   }
 });
 

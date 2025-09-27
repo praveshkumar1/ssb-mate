@@ -1,3 +1,4 @@
+/// <reference types="jest" />
 import { csrfProtection, CSRF_COOKIE_NAME, CSRF_HEADER_NAME } from './csrf';
 
 describe('csrfProtection middleware', () => {

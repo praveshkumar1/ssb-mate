@@ -158,7 +158,7 @@ const UserSchema: Schema = new Schema({
       
       // Add profileImageUrl for frontend compatibility if not present
       if (!ret.profileImageUrl) {
-        ret.profileImageUrl = '/placeholder.svg';
+        ret.profileImageUrl = '/avatars/soldier_male.png';
       }
       
       // Map experience number to experience level string for frontend compatibility
