@@ -11,7 +11,7 @@ const BlogSection = () => {
       title: "10 Essential Tips for SSB Psychology Tests",
       excerpt: "Master the psychological assessment with these proven strategies from former SSB officers. Learn how to approach TAT, WAT, and SRT effectively.",
       author: "Col. Rajesh Kumar",
-      authorAvatar: "/placeholder.svg",
+  authorAvatar: "/avatars/soldier_male.png",
       readTime: "8 min read",
       publishDate: "Dec 15, 2023",
       category: "Psychology",
@@ -22,7 +22,7 @@ const BlogSection = () => {
       title: "Common Mistakes in Group Discussion Round",
       excerpt: "Avoid these critical errors that most candidates make during GD. Expert insights on how to stand out positively in group activities.",
       author: "Maj. Priya Singh", 
-      authorAvatar: "/placeholder.svg",
+  authorAvatar: "/avatars/soldier_male.png",
       readTime: "6 min read",
       publishDate: "Dec 12, 2023",
       category: "Group Tasks"
@@ -32,7 +32,7 @@ const BlogSection = () => {
       title: "Personal Interview: What SSB Officers Really Look For",
       excerpt: "Understand the mindset of SSB interviewers and learn how to present yourself authentically while showcasing leadership qualities.",
       author: "Lt. Col. Amit Sharma",
-      authorAvatar: "/placeholder.svg", 
+  authorAvatar: "/avatars/soldier_male.png", 
       readTime: "10 min read",
       publishDate: "Dec 10, 2023",
       category: "Interview"

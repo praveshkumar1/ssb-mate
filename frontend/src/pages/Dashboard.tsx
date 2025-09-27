@@ -8,6 +8,7 @@ import { sessionService } from '@/services/sessionService';
 import { useToast } from '@/hooks/use-toast';
 import ManageAvailabilityPanel from '@/components/coach/ManageAvailabilityPanel';
 import QuickEditProfileModal from '@/components/QuickEditProfileModal';
+import TagInput from '@/components/ui/TagInput';
 
 const renderPerson = (p: any) => {
   if (!p) return '';
@@ -33,6 +34,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<any>(null);
   const [avatarPulseKey, setAvatarPulseKey] = useState(0);
+  // inline editing removed - users should use Edit Profile page or Quick Edit modal
 
   useEffect(() => {
     let mounted = true;
@@ -83,25 +85,82 @@ const Dashboard = () => {
 
   const mentor = mentorSessions();
 
+  // Small star rating display
+  const StarRating: React.FC<{ value: number }> = ({ value }) => {
+    const full = Math.floor(value);
+    const half = value - full >= 0.5;
+    const stars = [] as React.ReactNode[];
+    for (let i = 0; i < 5; i++) {
+      if (i < full) stars.push(<span key={i} className="text-yellow-500">★</span>);
+      else if (i === full && half) stars.push(<span key={i} className="text-yellow-500">☆</span>);
+      else stars.push(<span key={i} className="text-muted-foreground">☆</span>);
+    }
+    return <div className="text-xl">{stars}</div>;
+  };
+
+  // Rate card for mentors - allows editing hourlyRate inline with save/cancel
+  const RateCard: React.FC<{ profile: any; setProfile: (p: any) => void }> = ({ profile, setProfile }) => {
+    const [editing, setEditing] = useState(false);
+    const [value, setValue] = useState<string>(profile?.hourlyRate ? String(profile.hourlyRate) : '');
+    const [saving, setSaving] = useState(false);
+
+    useEffect(() => { setValue(profile?.hourlyRate ? String(profile.hourlyRate) : ''); }, [profile?.hourlyRate]);
+
+    const save = async () => {
+      setSaving(true);
+      try {
+        const resp: any = await apiClient.put('/users/profile', { hourlyRate: value ? Number(value) : null });
+        const updated = resp?.data ?? resp;
+        setProfile(updated);
+        setEditing(false);
+      } catch (e) {
+        console.error('Failed to save rate', e);
+      } finally { setSaving(false); }
+    };
+
+    return (
+      <div className="p-4 bg-background rounded shadow-sm">
+        <h3 className="text-sm font-medium">Rate</h3>
+        <div className="mt-2">
+          {editing ? (
+            <div className="flex items-center gap-2 justify-between">
+              <input className="w-24 p-1 border rounded" value={value} onChange={e => setValue(e.target.value)} />
+              <div className="flex gap-2">
+                <button className="text-sm text-green-600" onClick={save} disabled={saving}>{saving ? 'Saving...' : 'Save'}</button>
+                <button className="text-sm text-red-500" onClick={() => { setEditing(false); setValue(profile?.hourlyRate ? String(profile.hourlyRate) : ''); }}>Cancel</button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between">
+              <div className="text-lg font-semibold">{profile?.hourlyRate ? `$${profile.hourlyRate}` : 'Not set'}</div>
+              <button className="text-sm text-muted-foreground" onClick={() => setEditing(true)}>Edit</button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 flex gap-6">
         <Sidebar />
         <main className="flex-1">
           <div className="bg-card p-6 rounded shadow">
-            {isMentor ? (
-              <div>
-                <h2 className="text-xl font-semibold">Mentor Dashboard</h2>
-                <p className="text-sm text-muted-foreground">Quick view of your upcoming sessions and recent activity.</p>
+            <h2 className="text-xl font-semibold">{isMentor ? 'Mentor Dashboard' : `Welcome${profile?.firstName ? `, ${profile.firstName}` : ''}`}</h2>
+            <p className="text-sm text-muted-foreground">Quick view of your account. Complete your profile to get the most out of the platform.</p>
 
-                <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <section>
-                    <h3 className="text-sm font-medium">Upcoming Sessions</h3>
-                    {loading ? (
-                      <div className="h-24 bg-muted animate-pulse mt-2 rounded" />
-                    ) : (
+            <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Left column: main actions / upcoming */}
+              <div className="space-y-4">
+                <div className="p-4 bg-background rounded shadow-sm">
+                  <h3 className="text-sm font-medium">Upcoming Sessions</h3>
+                  {loading ? (
+                    <div className="h-24 bg-muted animate-pulse mt-2 rounded" />
+                  ) : (
+                    ((isMentor ? mentor.upcoming : sessions) || []).length ? (
                       <ul className="mt-2 space-y-3">
-                        {(mentor.upcoming || []).slice(0, 5).map((s: any) => (
+                        {((isMentor ? mentor.upcoming : sessions) || []).slice(0, 5).map((s: any) => (
                           <li key={s._id || s.id} className="p-3 border rounded flex items-center justify-between">
                             <div>
                               <div className="font-bold">{s.title}</div>
@@ -110,121 +169,112 @@ const Dashboard = () => {
                             </div>
                             <div className="flex flex-col items-end gap-2">
                               {s.meetingLink && (
-                                <a href={s.meetingLink} target="_blank" rel="noopener noreferrer" className="text-white bg-primary px-3 py-1 rounded">Start Session</a>
+                                <a href={s.meetingLink} target="_blank" rel="noopener noreferrer" className="text-white bg-primary px-3 py-1 rounded">Start</a>
                               )}
                               <Link to={`/sessions/${s._id || s.id}`} className="text-primary">Details</Link>
                             </div>
                           </li>
                         ))}
-                        {(mentor.upcoming || []).length === 0 && <li className="text-sm text-muted-foreground">No upcoming sessions</li>}
                       </ul>
-                    )}
-                  </section>
-
-                  <section>
-                    <h3 className="text-sm font-medium">Manage Availability</h3>
-                    <p className="text-xs text-muted-foreground">Add available time slots that learners can book. Times are stored in ISO format (UTC).</p>
-                    <div className="mt-3">
-                      <ManageAvailabilityPanel profile={profile} onUpdate={(newAvailability: string[]) => {
-                        setProfile((p: any) => ({ ...p, availability: newAvailability }));
-                      }} />
-                    </div>
-                  </section>
+                    ) : (
+                      <div className="mt-3 text-sm text-muted-foreground">No upcoming sessions yet. Share your availability to start getting bookings.</div>
+                    )
+                  )}
                 </div>
-                
-                <div className="mt-6">
-                  <h3 className="text-sm font-medium">Your coach profile</h3>
-                  <div className="mt-3 p-4 bg-background rounded shadow-sm grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+
+                <div className="p-4 bg-background rounded shadow-sm">
+                  <h3 className="text-sm font-medium">Quick Links</h3>
+                  <div className="mt-3 flex flex-col gap-2">
+                    <Button variant="ghost" onClick={() => navigate('/coaches')}>Find Coaches</Button>
+                    <Button variant="ghost" onClick={() => navigate('/sessions/create')}>Create Session</Button>
+                    <Button variant="ghost" onClick={() => navigate('/resources')}>Resources</Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Middle column: profile summary + separate About & Achievements cards */}
+              <div className="space-y-4">
+                <div className="p-4 bg-background rounded shadow-sm">
+                  <h3 className="text-sm font-medium">Your profile</h3>
+                  <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
                     <div className="col-span-1 flex items-center justify-center">
                       <div className="w-24 h-24 rounded-full overflow-hidden flex items-center justify-center">
                         <img
                           key={profile?.profileImageUrl || avatarPulseKey}
-                          src={profile?.profileImageUrl || '/placeholder.svg'}
+                          src={profile?.profileImageUrl || '/avatars/soldier_male.png'}
                           alt="avatar"
-                          className="w-24 h-24 object-cover rounded-full transform transition-transform duration-500"
-                          onLoad={() => { /* trigger a small scale animation */ setAvatarPulseKey(k => k + 1); }}
+                          className="w-24 h-24 object-cover rounded-full"
+                          onLoad={() => setAvatarPulseKey(k => k + 1)}
                         />
                       </div>
                     </div>
-                    <div className="col-span-1 md:col-span-1">
+                    <div className="col-span-2">
                       <div className="text-lg font-semibold">{profile?.firstName} {profile?.lastName}</div>
-                      <div className="text-sm text-muted-foreground">{profile?.education || ''}</div>
-                      <div className="mt-2 text-sm">{profile?.bio || 'No bio yet. Add a short description about your coaching approach.'}</div>
-                      <div className="mt-2">
-                        {(profile?.specializations || []).slice(0,5).map((s: string) => (
-                          <span key={s} className="inline-block mr-2 mt-2 bg-muted px-2 py-1 rounded text-xs">{s}</span>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="col-span-1 md:col-span-1 flex flex-col items-end gap-3">
-                      <div className="text-sm">Rate: <span className="font-semibold">{profile?.hourlyRate ? `$${profile.hourlyRate}` : 'Not set'}</span></div>
-                      <div className="text-sm">Experience: <span className="font-semibold">{profile?.experience ? `${profile.experience} yrs` : 'Not set'}</span></div>
-                      <div className="text-sm">Total sessions: <span className="font-semibold">{sessions.filter(s => String(s.mentorId) === String(profile._id)).length}</span></div>
-                      <div className="text-sm">Rating: <span className="font-semibold">{profile?.rating ?? 0} / 5</span></div>
-                        <div className="text-sm text-muted-foreground">{profile?.education || ''}</div>
-                        {profile?.email && <div className="text-xs text-muted-foreground">{profile.email}</div>}
-                      <div className="text-sm">Completed: <span className="font-semibold">{stats?.completed ?? '-'}</span></div>
-                      <div className="text-sm">Revenue: <span className="font-semibold">${stats?.revenue ?? '0.00'}</span></div>
-                      <div>
-                        <div className="flex gap-2">
-                          <Button variant="secondary" onClick={() => navigate('/profile/edit')}>Edit profile</Button>
-                          <Button variant="outline" onClick={() => setQuickEditOpen(true)}>Quick edit</Button>
-                        </div>
+                      <div className="text-xs text-muted-foreground">{profile?.email}</div>
+
+                      <div className="mt-3">
+                        <div className="text-sm font-medium">Education</div>
+                        <div className="mt-1 text-sm text-muted-foreground">{profile?.education || 'No education added yet — tell others about your background.'}</div>
                       </div>
                     </div>
                   </div>
                 </div>
-                <QuickEditProfileModal open={quickEditOpen} onClose={() => setQuickEditOpen(false)} profile={profile} onSaved={(updated: any) => {
-                  const newProfile = updated?.data ?? updated;
-                  setProfile(newProfile);
-                  // bump key to re-render avatar and trigger animation
-                  setAvatarPulseKey(k => k + 1);
-                }} />
-              </div>
-            ) : (
-              <div>
-                <h2 className="text-xl font-semibold">Welcome{profile?.firstName ? `, ${profile.firstName}` : ''}</h2>
-                <p className="text-sm text-muted-foreground">Here is a quick overview of your account.</p>
 
-                <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="p-4 bg-background rounded">
-                    <h3 className="text-sm font-medium">Profile</h3>
-                    {loading ? (
-                      <div className="h-6 bg-muted rounded animate-pulse" />
+                <div className="p-4 bg-background rounded shadow-sm">
+                  <h3 className="text-sm font-medium">About</h3>
+                  <div className="mt-2 text-sm">{profile?.bio || 'No bio yet — write a short paragraph about yourself to help others get to know you.'}</div>
+                </div>
+
+                <div className="p-4 bg-background rounded shadow-sm">
+                  <h3 className="text-sm font-medium">Achievements</h3>
+                  <div className="mt-2">
+                    {(profile?.achievements || []).length ? (
+                      (profile.achievements || []).slice(0,5).map((a: string) => (
+                        <span key={a} className="inline-block mr-2 mt-2 bg-muted px-2 py-1 rounded text-xs">{a}</span>
+                      ))
                     ) : (
-                      <div className="mt-2">
-                        <div className="text-sm">{profile?.firstName} {profile?.lastName}</div>
-                        <div className="text-xs text-muted-foreground">{profile?.email}</div>
-                        <div className="mt-2"><Button variant="ghost" onClick={() => navigate('/profile/edit')}>Edit Profile</Button></div>
-                      </div>
+                      <div className="text-sm text-muted-foreground">No achievements yet — add some to showcase your accomplishments.</div>
                     )}
-                  </div>
-
-                  <div className="p-4 bg-background rounded">
-                    <h3 className="text-sm font-medium">Upcoming Sessions</h3>
-                    {loading ? (
-                      <div className="h-12 bg-muted rounded animate-pulse mt-2" />
-                    ) : (
-                      <ul className="mt-2 space-y-2">
-                        {sessions.length === 0 && <li className="text-sm text-muted-foreground">No upcoming sessions</li>}
-                        {sessions.slice(0, 3).map(s => (
-                          <li key={s._id || s.id} className="text-sm">{s.title || s.name} <div className="text-xs text-muted-foreground">{new Date(s.scheduledAt || s.createdAt || Date.now()).toLocaleString()}</div></li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-
-                  <div className="p-4 bg-background rounded">
-                    <h3 className="text-sm font-medium">Quick Links</h3>
-                    <div className="mt-2 flex flex-col gap-2">
-                      <Button variant="ghost" onClick={() => navigate('/coaches')}>Find Coaches</Button>
-                      <Button variant="ghost" onClick={() => navigate('/sessions/create')}>Create Session</Button>
-                      <Button variant="ghost" onClick={() => navigate('/resources')}>Resources</Button>
-                    </div>
                   </div>
                 </div>
               </div>
-            )}
+
+              {/* Right column: role-specific cards (mentor vs normal) */}
+              <div className="space-y-4">
+                {isMentor ? (
+                  <>
+                    <RateCard profile={profile} setProfile={setProfile} />
+
+                    <div className="p-4 bg-background rounded shadow-sm">
+                      <h3 className="text-sm font-medium">Rating</h3>
+                      <div className="mt-2 flex items-center gap-2">
+                        <StarRating value={profile?.rating ?? 0} />
+                        <div className="text-sm text-muted-foreground">{(profile?.rating ?? 0).toFixed(1)} / 5</div>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="p-4 bg-background rounded shadow-sm">
+                    <h3 className="text-sm font-medium">Completed sessions</h3>
+                    <div className="mt-2 text-lg font-semibold">{stats?.completed ?? 0}</div>
+                    <div className="text-xs text-muted-foreground mt-1">Sessions you have completed on the platform</div>
+                  </div>
+                )}
+
+                <div className="p-4 bg-background rounded shadow-sm">
+                  <h3 className="text-sm font-medium">Manage</h3>
+                  <div className="mt-3 flex gap-2 justify-end">
+                    <Button variant="secondary" onClick={() => navigate('/profile/edit')}>Edit profile</Button>
+                    <Button variant="outline" onClick={() => setQuickEditOpen(true)}>Quick edit</Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <QuickEditProfileModal open={quickEditOpen} onClose={() => setQuickEditOpen(false)} profile={profile} onSaved={(updated: any) => {
+              const newProfile = updated?.data ?? updated;
+              setProfile(newProfile);
+              setAvatarPulseKey(k => k + 1);
+            }} />
           </div>
         </main>
       </div>

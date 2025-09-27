@@ -42,7 +42,10 @@ const Navbar = () => {
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <div className="flex-shrink-0">
-            <span className="text-2xl font-bold text-primary">SSB Coach</span>
+            <Link to="/" className="flex items-center">
+              <img src="/logo.svg" alt="SSB MATE" className="h-8 w-8 mr-2" />
+              <span className="text-2xl font-bold text-primary">SSB MATE</span>
+            </Link>
           </div>
 
           {/* Desktop Navigation */}
@@ -56,9 +59,6 @@ const Navbar = () => {
               </a>
               <a href="#blog" className="text-foreground hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-colors">
                 SSB Tips
-              </a>
-              <a href="#about" className="text-foreground hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-colors">
-                About
               </a>
             </div>
           </div>

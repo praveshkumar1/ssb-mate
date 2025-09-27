@@ -46,9 +46,10 @@ const Login = () => {
     }
     setLoading(true);
     try {
-      const resp = await authService.login({ email, password });
-      // resp is axios-style: resp.data might have token
-  const data: any = resp?.data ?? resp;
+    const resp = await authService.login({ email, password });
+    // resp might be axios-style (resp.data) or already the data; cast to any to safely access both shapes
+    const respAny: any = resp;
+    const data: any = respAny?.data ?? respAny;
   const token = data?.token ?? data?.data?.token ?? data?.accessToken ?? null;
   const user = data?.user ?? data?.data?.user ?? null;
 

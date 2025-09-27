@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { coachService } from '@/services/coachService';
 import { apiClient } from '@/services/api';
 
 const CreateSession = () => {
@@ -7,6 +8,7 @@ const CreateSession = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const [selectedCoach, setSelectedCoach] = useState<any>(null);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,10 +22,11 @@ const CreateSession = () => {
     } finally { setLoading(false); }
   };
 
-  // Prefill mentorId from query string if present
+  // Prefill mentorId (or coachId) from query string if present and fetch coach details
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const mentorId = params.get('mentorId');
+    const coachId = params.get('coachId');
     const startsAt = params.get('startsAt');
     const sessionType = params.get('sessionType');
     const minutes = params.get('minutes');
@@ -48,6 +51,21 @@ const CreateSession = () => {
     if (Object.keys(updates).length > 0) {
       setForm(f => ({ ...f, ...updates }));
     }
+
+    // If coachId is provided prefer it and fetch coach details
+    const resolvedId = coachId || mentorId;
+    if (resolvedId) {
+      setForm(f => ({ ...f, mentorId: resolvedId }));
+      (async () => {
+        try {
+          const c = await coachService.getCoachById(resolvedId);
+          const coachObj = c;
+          if (coachObj) setSelectedCoach(coachObj);
+        } catch (err) {
+          console.warn('Could not fetch coach by id', err);
+        }
+      })();
+    }
   }, []);
 
   return (
@@ -56,7 +74,14 @@ const CreateSession = () => {
       <form onSubmit={submit} className="space-y-3 max-w-lg">
         <input placeholder="Title" className="w-full p-2 border rounded" value={form.title} onChange={e => setForm({...form, title: e.target.value})} />
         <textarea placeholder="Description" className="w-full p-2 border rounded" value={form.description} onChange={e => setForm({...form, description: e.target.value})} />
-        <input placeholder="Mentor ID" className="w-full p-2 border rounded" value={form.mentorId} onChange={e => setForm({...form, mentorId: e.target.value})} />
+        {selectedCoach ? (
+          <div className="p-2 border rounded bg-muted/10">
+            <div className="font-medium">{selectedCoach.name || `${selectedCoach.firstName || ''} ${selectedCoach.lastName || ''}`}</div>
+            <div className="text-xs text-muted-foreground">Mentor pre-selected</div>
+          </div>
+        ) : (
+          <input placeholder="Mentor ID" className="w-full p-2 border rounded" value={form.mentorId} onChange={e => setForm({...form, mentorId: e.target.value})} />
+        )}
         <input type="datetime-local" className="w-full p-2 border rounded" value={form.scheduledAt} onChange={e => setForm({...form, scheduledAt: e.target.value})} />
         {error && <div className="text-red-600">{error}</div>}
         <button className="py-2 px-4 bg-primary text-white rounded" disabled={loading}>{loading ? 'Creating...' : 'Create'}</button>

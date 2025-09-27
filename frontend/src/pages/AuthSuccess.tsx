@@ -24,6 +24,16 @@ const AuthSuccess = () => {
           const json = await resp.json();
           const user = json.data || json;
           auth.login('', user);
+          // If the OAuth flow signaled a newly-created user, route to the choose-role page.
+          // Also check a short-lived fallback cookie `ssb_new_user` which the server may set.
+          const created = searchParams.get('created');
+          const newUserCookie = document.cookie.split(';').map(s => s.trim()).find(c => c.startsWith('ssb_new_user='));
+          if (created === '1' || newUserCookie) {
+            // clear the cookie
+            try { document.cookie = 'ssb_new_user=; Max-Age=0; path=/'; } catch (e) { /* ignore */ }
+            navigate('/choose-role', { replace: true });
+            return;
+          }
           navigate('/dashboard', { replace: true });
           return;
         }

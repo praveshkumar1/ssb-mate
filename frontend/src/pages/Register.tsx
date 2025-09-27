@@ -34,8 +34,9 @@ const Register = () => {
     setLoading(true);
     setError(null);
     try {
-      const resp = await authService.register(form as any);
-      const data: any = resp?.data ?? resp;
+  const resp = await authService.register(form as any);
+  const respAny: any = resp;
+  const data: any = respAny?.data ?? respAny;
       const token = data?.token ?? data?.data?.token ?? null;
       const user = data?.user ?? data?.data?.user ?? null;
 

@@ -89,7 +89,7 @@ const CoachProfile: React.FC = () => {
   // map API fields to local variables using the sample shape provided
   const coachId = coach?.id ?? coach?._id ?? id;
   const name = (coach?.name) || `${coach?.firstName || ''} ${coach?.lastName || ''}`.trim() || 'Coach';
-  const avatar = coach?.profileImageUrl || coach?.profileImageUrl || '/placeholder.svg';
+  const avatar = coach?.profileImageUrl || coach?.profileImageUrl || '/avatars/soldier_male.png';
   const title = coach?.title || coach?.role || '';
   const place = coach?.location || '';
   const bio = coach?.bio || '';

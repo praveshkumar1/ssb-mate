@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Star, MapPin, Clock, Users, Video, MessageSquare, Loader2, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useState, useEffect } from "react";
+import { useNavigate } from 'react-router-dom';
 import { coachService } from "@/services/coachService";
 import { Coach } from "@/types";
 
@@ -12,6 +13,7 @@ const FeaturedCoaches = () => {
   const [coaches, setCoaches] = useState<Coach[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchCoaches = async () => {
@@ -41,7 +43,7 @@ const FeaturedCoaches = () => {
       email: "rajesh@example.com",
       role: "mentor",
       bio: "Former SSB Interviewing Officer with 15+ years experience",
-      profileImageUrl: "/placeholder.svg",
+  profileImageUrl: "/avatars/soldier_male.png",
       specializations: ["Psychology", "Command Tasks"],
       experience: "senior",
       certifications: ["SSB Instructor", "Psychology Specialist"],
@@ -61,7 +63,7 @@ const FeaturedCoaches = () => {
       email: "priya@example.com",
       role: "mentor",
       bio: "SSB Psychology expert and former Army Officer",
-      profileImageUrl: "/placeholder.svg",
+  profileImageUrl: "/avatars/soldier_male.png",
       specializations: ["Psychology", "Interview Techniques"],
       experience: "experienced",
       certifications: ["Clinical Psychology", "SSB Interviewer"],
@@ -81,7 +83,7 @@ const FeaturedCoaches = () => {
       email: "anil@example.com",
       role: "mentor",
       bio: "Retired Army Colonel with SSB Board experience",
-      profileImageUrl: "/placeholder.svg",
+  profileImageUrl: "/avatars/soldier_male.png",
       specializations: ["Command Tasks", "Group Discussion", "Interview"],
       experience: "senior",
       certifications: ["Defense Training", "Leadership Coach"],
@@ -238,13 +240,11 @@ const FeaturedCoaches = () => {
                 </div>
 
                 <div className="flex space-x-2 pt-4">
-                  <Button size="sm" className="flex-1">
+                  <Button size="sm" className="flex-1" onClick={() => navigate(`/coaches/${coach.id}/?focus=availability`)}>
                     <Video className="h-4 w-4 mr-2" />
                     Book Session
                   </Button>
-                  <Button size="sm" variant="outline">
-                    <MessageSquare className="h-4 w-4" />
-                  </Button>
+                  {/* Chat option removed per request */}
                 </div>
               </CardContent>
             </Card>
@@ -252,7 +252,7 @@ const FeaturedCoaches = () => {
         </div>
 
         <div className="text-center mt-12">
-          <Button size="lg" variant="outline">
+          <Button size="lg" variant="outline" onClick={() => navigate('/coaches')}>
             View All Mentors
           </Button>
         </div>

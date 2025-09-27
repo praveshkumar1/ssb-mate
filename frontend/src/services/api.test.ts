@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest';
+// @ts-nocheck
+/// <reference types="vitest" />
 import { apiClient } from './api';
 
 // Very small unit test: ensure apiClient exists and has request method

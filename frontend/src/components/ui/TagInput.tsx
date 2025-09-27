@@ -30,6 +30,8 @@ const TagInput: React.FC<Props> = ({ value = [], onChange, placeholder = '', id,
     onChange?.(next);
     setInput('');
     setHighlight(-1);
+    // remove chosen tag from popular options immediately
+    setPopularLocal(prev => prev.filter(p => p !== t));
     announce(`${t} added`);
   };
 
@@ -102,25 +104,22 @@ const TagInput: React.FC<Props> = ({ value = [], onChange, placeholder = '', id,
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const [dropdownStyle, setDropdownStyle] = useState<{ left?: number; top?: number; width?: number }>({});
 
+  // Popular options: local state so clicks remove them immediately for better UX
+  const [popularLocal, setPopularLocal] = useState<string[]>(() => suggestions.filter(s => !value.includes(s)).slice(0, 8));
+
+  // Keep popularLocal in sync when suggestions or value change
   useEffect(() => {
-    const calc = () => {
-      const cont = containerRef.current;
-      const inp = inputRef.current;
-      if (!cont || !inp) return setDropdownStyle({});
-      const contRect = cont.getBoundingClientRect();
-      const inpRect = inp.getBoundingClientRect();
-      setDropdownStyle({
-        left: inpRect.left - contRect.left,
-        top: inpRect.bottom - contRect.top + 6,
-        width: Math.max(200, inpRect.width)
-      });
-    };
-    calc();
-    window.addEventListener('resize', calc);
-    return () => window.removeEventListener('resize', calc);
-  }, [filteredSuggestions.length]);
+    const fromProps = suggestions.filter(s => !value.includes(s));
+    // If a popular list was already pruned locally, keep that pruning
+    setPopularLocal(prev => {
+      // keep items that are still present in fromProps and were not added to value
+      const next = fromProps.filter(s => !value.includes(s));
+      // preserve previous order but limit to 8
+      const merged = prev.concat(next.filter(s => !prev.includes(s))).slice(0, 8);
+      return merged;
+    });
+  }, [suggestions, value]);
 
   return (
     <div className="relative border rounded p-2 bg-white" ref={containerRef}>
@@ -147,15 +146,14 @@ const TagInput: React.FC<Props> = ({ value = [], onChange, placeholder = '', id,
           aria-expanded={filteredSuggestions.length > 0}
         />
       </div>
-      {filteredSuggestions.length > 0 && (
-        <ul role="listbox" style={{ left: dropdownStyle.left, top: dropdownStyle.top, width: dropdownStyle.width }} className="absolute bg-white border rounded shadow max-h-40 overflow-auto z-10">
-          {filteredSuggestions.map((s, i) => (
-            <li key={s} role="option" aria-selected={i === highlight} onMouseDown={(e) => { e.preventDefault(); addTag(s); }}
-              className={`px-3 py-2 cursor-pointer ${i === highlight ? 'bg-slate-100' : ''}`}>
-              {s}
-            </li>
+      {popularLocal.length > 0 && (
+        <div className="mt-3 mb-2 flex flex-wrap gap-2">
+          {popularLocal.map(p => (
+            <button key={p} type="button" onClick={() => { addTag(p); setPopularLocal(pl => pl.filter(x => x !== p)); }} className="px-3 py-1 bg-slate-100 rounded text-sm">
+              {p}
+            </button>
           ))}
-        </ul>
+        </div>
       )}
       <div className="text-xs text-muted-foreground mt-1">Press Enter or comma to add</div>
       <div aria-live="polite" ref={liveRef} className="sr-only" />
