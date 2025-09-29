@@ -117,16 +117,18 @@ const CoachesList = () => {
                   coach={{
                     id: c._id ?? c.id,
                     name: `${c.firstName || ''} ${c.lastName || ''}`.trim() || c.name || 'Coach',
-                    title: c.title || c.specialization?.[0] || 'Coach',
-                    specialization: c.specialization || [],
+                    title: c.title || (Array.isArray(c.specializations) ? c.specializations[0] : (c.specialization?.[0])) || 'SSB Mentor',
+                    specialization: c.specializations || c.specialization || [],
                     experience_years: c.experience_years ?? c.experience ?? 0,
-                    hourly_rate: c.hourly_rate ?? c.rate ?? 0,
+                    hourly_rate: c.hourly_rate ?? c.rate ?? c.hourlyRate ?? 0,
                     bio: c.bio || c.description || '',
                     achievements: c.achievements || [],
                     rating: c.rating ?? 0,
-                    total_reviews: c.total_reviews ?? c.reviews_count ?? 0,
-                    is_verified: c.is_verified ?? c.verified ?? false,
-                    avatar_url: c.avatarUrl ?? c.avatar_url ?? c.avatar
+                    total_reviews: c.total_reviews ?? c.reviews_count ?? c.totalReviews ?? 0,
+                    is_verified: c.is_verified ?? c.verified ?? c.isVerified ?? false,
+                    avatar_url: c.avatarUrl ?? c.avatar_url ?? c.avatar ?? c.profileImageUrl,
+                    education: c.education,
+                    location: c.location
                   }}
                   onBookSession={handleBook}
                 />
