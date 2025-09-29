@@ -116,29 +116,32 @@ const DashboardSessions = () => {
                 </div>
 
                 <div className="space-y-3">
-                  <h4 className="text-sm font-medium">Top Coaches</h4>
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-medium">Top Coaches</h4>
+                    <Link to="/coaches" className="text-xs text-primary hover:underline">Find coaches</Link>
+                  </div>
                   <div className="grid grid-cols-1 gap-3">
-                    {coaches.map(c => {
+                    {coaches.slice(0, 3).map(c => {
                       const id = c._id || c.id;
                       // normalize fields expected by CoachCard
                       const coach = {
                         id,
-                        name: c.name || c.displayName || c.fullName || 'Coach',
-                        title: c.title || c.specialization?.[0] || '',
-                        specialization: c.specialization || (c.specializations ? c.specializations : []),
+                        name: `${c.firstName || ''} ${c.lastName || ''}`.trim() || c.name || c.displayName || c.fullName || 'Coach',
+                        title: c.title || (Array.isArray(c.specializations) ? c.specializations[0] : (c.specialization?.[0])) || 'SSB Mentor',
+                        specialization: c.specializations || c.specialization || [],
                         experience_years: c.experience_years || c.experience || 0,
-                        hourly_rate: c.hourly_rate || c.rate || 0,
+                        hourly_rate: c.hourly_rate || c.rate || c.hourlyRate || 0,
                         bio: c.bio || c.summary || '',
                         achievements: c.achievements || [],
                         rating: (c.rating ?? c.avgRating ?? 0) as number,
-                        total_reviews: c.total_reviews || c.reviews || 0,
-                        is_verified: c.is_verified || c.verified || false,
-                        avatar_url: c.avatar_url || c.avatar || undefined,
+                        total_reviews: c.total_reviews || c.reviews || c.totalReviews || 0,
+                        is_verified: c.is_verified || c.verified || c.isVerified || false,
+                        avatar_url: c.avatar_url || c.avatar || c.profileImageUrl || undefined,
                       } as any;
 
                       return (
                         <div key={id}>
-                          <CoachCard coach={coach} onBookSession={() => navigate(`/coaches/${id}?focus=availability`)} />
+                          <CoachCard variant="compact" coach={coach} onBookSession={() => navigate(`/coaches/${id}?focus=availability`)} />
                         </div>
                       );
                     })}

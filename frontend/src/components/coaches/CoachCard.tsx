@@ -25,13 +25,58 @@ interface Coach {
 interface CoachCardProps {
   coach: Coach;
   onBookSession?: (coach: Coach) => void;
+  variant?: 'default' | 'compact';
 }
 
-export const CoachCard = ({ coach, onBookSession }: CoachCardProps) => {
+export const CoachCard = ({ coach, onBookSession, variant = 'default' }: CoachCardProps) => {
   const initials = coach.name
     ?.split(' ')
     .map(n => n[0])
     .join('') || 'C';
+
+  if (variant === 'compact') {
+    return (
+      <Card className="h-full transition-all duration-300 hover:shadow-md">
+        <CardContent className="p-4">
+          <div className="flex items-start gap-3">
+            <Avatar className="h-12 w-12 ring-1 ring-primary/10">
+              {coach.avatar_url ? <AvatarImage src={coach.avatar_url} alt={coach.name} /> : <AvatarFallback className="text-sm font-semibold bg-primary/10 text-primary">{initials}</AvatarFallback>}
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="text-sm font-semibold truncate">{coach.name}</h3>
+                <div className="flex items-center gap-2">
+                  {/* rating */}
+                  <div className="flex items-center gap-1 text-xs">
+                    <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+                    <span className="font-medium">{(coach.rating ?? 0).toFixed(1)}</span>
+                    <span className="text-muted-foreground">({coach.total_reviews ?? 0})</span>
+                  </div>
+                  {coach.hourly_rate && coach.hourly_rate > 0 ? (
+                    <Badge variant="outline" className="text-[10px] py-0.5 px-1.5">₹{coach.hourly_rate}/hr</Badge>
+                  ) : null}
+                </div>
+              </div>
+              {/* skills */}
+              <div className="mt-2 flex flex-wrap gap-1">
+                {(coach.specialization || []).slice(0, 2).map((s: any) => (
+                  <Badge key={s} variant="secondary" className="text-[10px] py-0.5 px-1.5">{s}</Badge>
+                ))}
+                {(coach.specialization || []).length > 2 && (
+                  <Badge variant="outline" className="text-[10px] py-0.5 px-1.5">+{(coach.specialization || []).length - 2}</Badge>
+                )}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+        <CardFooter className="p-3 pt-0">
+          <div className="w-full flex justify-end">
+            <Link to={`/coaches/${coach.id}`} className="inline-flex items-center justify-center px-3 py-1.5 border rounded text-xs text-primary hover:bg-primary/5">View profile</Link>
+          </div>
+        </CardFooter>
+      </Card>
+    );
+  }
 
   return (
     <Card className="h-full transition-all duration-300 hover:shadow-xl border-l-4 border-l-primary/70">

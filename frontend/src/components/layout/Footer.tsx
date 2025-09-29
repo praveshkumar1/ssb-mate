@@ -78,7 +78,7 @@ const Footer = () => {
             </div>
 
             {/* Support */}
-            <div className="space-y-4">
+            {/* <div className="space-y-4">
               <h4 className="text-lg font-semibold text-foreground">Support</h4>
               <ul className="space-y-2">
                 <li>
@@ -91,23 +91,8 @@ const Footer = () => {
                     Contact Us
                   </a>
                 </li>
-                <li>
-                  <a href="#become-coach" className="text-muted-foreground hover:text-primary transition-smooth">
-                    Become a Coach
-                  </a>
-                </li>
-                <li>
-                  <a href="#privacy" className="text-muted-foreground hover:text-primary transition-smooth">
-                    Privacy Policy
-                  </a>
-                </li>
-                <li>
-                  <a href="#terms" className="text-muted-foreground hover:text-primary transition-smooth">
-                    Terms of Service
-                  </a>
-                </li>
               </ul>
-            </div>
+            </div> */}
 
             {/* Contact Info */}
             <div className="space-y-4">
@@ -115,15 +100,15 @@ const Footer = () => {
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
                   <Mail className="h-5 w-5 text-primary" />
-                  <a className="text-muted-foreground underline-offset-2 hover:underline" href="mailto:support@ssbacademy.com">support@ssbacademy.com</a>
+                  <a className="text-muted-foreground underline-offset-2 hover:underline" href="mailto:ssbmate@gmail.com">ssbmate@gmail.com</a>
                 </div>
                 <div className="flex items-center gap-3">
                   <Phone className="h-5 w-5 text-primary" />
-                  <a className="text-muted-foreground underline-offset-2 hover:underline" href="tel:+919876543210">+91 98765 43210</a>
+                  <a className="text-muted-foreground underline-offset-2 hover:underline" href="tel:+919876543210">+91 8352051876</a>
                 </div>
                 <div className="flex items-center gap-3">
                   <MapPin className="h-5 w-5 text-primary" />
-                  <span className="text-muted-foreground">New Delhi, India</span>
+                  <span className="text-muted-foreground">Pune, India</span>
                 </div>
               </div>
               
@@ -153,15 +138,9 @@ const Footer = () => {
         {/* Bottom Footer */}
         <div className="py-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <div className="text-muted-foreground text-sm">
-              © 2023 SSB Academy. All rights reserved.
-            </div>
+            
             <div className="flex items-center gap-6 text-sm text-muted-foreground">
               <span>Made with ❤️ for SSB Aspirants</span>
-              <div className="flex items-center gap-2">
-                <span>Powered by</span>
-                <span className="font-semibold text-primary">Lovable</span>
-              </div>
             </div>
           </div>
         </div>
