@@ -123,7 +123,7 @@ const QuickEditProfileModal: React.FC<Props> = ({ open, onClose, profile, onSave
         <DialogDescription className="mb-4">Small changes to your bio, hourly rate, or profile photo.</DialogDescription>
         <div className="space-y-3">
           <textarea value={bio} onChange={e => setBio(e.target.value)} placeholder="Short bio" className="w-full p-2 border rounded" />
-          <Input placeholder="Hourly rate (USD)" type="number" value={hourlyRate} onChange={e => setHourlyRate(e.target.value)} />
+          <Input placeholder="Hourly rate (INR)" type="number" value={hourlyRate} onChange={e => setHourlyRate(e.target.value)} />
           <div>
             <label className="text-sm">Profile photo</label>
             <input type="file" accept="image/*" onChange={onFileChange} />

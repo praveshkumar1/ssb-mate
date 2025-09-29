@@ -1,5 +1,14 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
+export type AvailabilityEntry =
+  | string
+  | {
+      start: string;
+      end?: string;
+      status?: 'available' | 'unavailable' | 'booked' | string;
+      booked?: boolean;
+    };
+
 export interface IUser extends Document {
   id: string;
   email: string;
@@ -10,6 +19,7 @@ export interface IUser extends Document {
   role: 'mentor' | 'mentee' | 'admin';
   isActive: boolean;
   isVerified: boolean;
+  isFeatured?: boolean;
   bio?: string;
   experience?: number;
   education?: string;
@@ -18,7 +28,7 @@ export interface IUser extends Document {
   unit?: string;
   achievements: string[];
   hourlyRate?: number;
-  availability: string[];
+  availability: AvailabilityEntry[];
   rating?: number;
   totalReviews?: number;
   location?: string;
@@ -69,6 +79,11 @@ const UserSchema: Schema = new Schema({
     type: Boolean,
     default: false
   },
+  isFeatured: {
+    type: Boolean,
+    default: false,
+    index: true
+  },
   bio: {
     type: String,
     maxlength: 1000
@@ -101,10 +116,7 @@ const UserSchema: Schema = new Schema({
     type: Number,
     min: 0
   },
-  availability: [{
-    type: String,
-    trim: true
-  }],
+  availability: [Schema.Types.Mixed],
   rating: {
     type: Number,
     min: 0,

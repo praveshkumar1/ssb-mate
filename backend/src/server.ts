@@ -19,6 +19,7 @@ import userRoutes from './routes/userRoutes';
 import authRoutes from './routes/authRoutes';
 import sessionRoutes from './routes/sessionRoutes';
 import resourceRoutes from './routes/resourceRoutes';
+import blogRoutes from './routes/blogRoutes';
 
 // Load environment variables
 dotenv.config();
@@ -74,8 +75,10 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 import path from 'path';
 import fs from 'fs';
 
-// Use repository root (process.cwd()) so the uploads path is consistent whether running via ts-node or built dist
-const uploadsDir = path.join(process.cwd(), 'backend', 'uploads');
+// Resolve uploads directory relative to compiled file location to avoid cwd differences
+// When built, __dirname points to backend/dist, so ../uploads -> backend/uploads
+// When running via ts-node, __dirname points to backend/src, so ../uploads -> backend/uploads
+const uploadsDir = path.resolve(__dirname, '../uploads');
 try {
   if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
@@ -115,6 +118,7 @@ app.get('/', (req, res) => {
         users: '/api/users/profile',
         sessions: '/api/sessions',
         resources: '/api/resources'
+        , blog: '/api/blog'
       }
     },
     timestamp: new Date().toISOString()
@@ -146,6 +150,7 @@ app.get('/api', (req, res) => {
       },
       sessions: '/api/sessions',
       resources: '/api/resources'
+      , blog: '/api/blog'
     },
     timestamp: new Date().toISOString(),
     status: 'online'
@@ -159,6 +164,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/sessions', sessionRoutes);
 app.use('/api/resources', resourceRoutes);
+app.use('/api/blog', blogRoutes);
 
 // CSRF protection for state-changing requests (reads cookie header and validates header token)
 app.use(csrfProtection);
@@ -185,11 +191,15 @@ const startServer = async () => {
     }
 
     // Start the server - bind to 0.0.0.0 for cloud deployment
-    app.listen(PORT, '0.0.0.0', () => {
+    let ip: string = '0.0.0.0';
+    if(process.env.NODE_ENV === 'development') { 
+      ip = 'localhost';
+    }
+    app.listen(PORT, ip, () => {
       logger.info(`🚀 Server is running on port ${PORT}`);
       logger.info(`📱 Environment: ${process.env.NODE_ENV || 'development'}`);
       logger.info(`🌐 CORS Allowed Origins: ${allowedOrigins.join(', ')}`);
-      logger.info(`📊 Health check: http://0.0.0.0:${PORT}/health`);
+      logger.info(`📊 Health check: http://${ip}:${PORT}/health`);
     });
   } catch (error) {
     logger.error('Failed to start server:', error);

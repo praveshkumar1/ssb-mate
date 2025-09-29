@@ -2,9 +2,10 @@ import React from 'react';
 
 type Props = {
   className?: string;
+  label?: string;
 };
 
-const GoogleSignInButton: React.FC<Props> = ({ className }) => {
+const GoogleSignInButton: React.FC<Props> = ({ className, label }) => {
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
   const redirectUri = import.meta.env.VITE_GOOGLE_REDIRECT_URI || `${window.location.origin}/api/auth/google/callback`;
   const params = new URLSearchParams({
@@ -20,8 +21,7 @@ const GoogleSignInButton: React.FC<Props> = ({ className }) => {
 
   return (
     <a href={authUrl} className={`inline-flex items-center justify-center gap-2 px-4 py-2 border rounded bg-white text-sm ${className || ''}`}>
-      <img src="/google-logo.svg" alt="Google" className="h-5 w-5" />
-      Sign in with Google
+      {label || 'Sign in with Google'}
     </a>
   );
 };

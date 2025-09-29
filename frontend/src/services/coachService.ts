@@ -41,6 +41,12 @@ export const coachService = {
     const params = limit ? `?limit=${limit}` : '';
     return apiClient.get<Coach[]>(`/coaches/top-rated${params}`);
   },
+
+  // Get featured mentors (prefer featured, fill with top-rated)
+  getFeaturedMentors: (limit?: number): Promise<Coach[]> => {
+    const params = limit ? `?limit=${limit}` : '';
+    return apiClient.get<Coach[]>(`/coaches/featured${params}`);
+  },
 };
 
 export default coachService;

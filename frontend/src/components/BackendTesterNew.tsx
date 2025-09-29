@@ -88,24 +88,26 @@ const BackendTester = () => {
 
   if (!showTester) {
     return (
-      <Card className="w-full max-w-2xl mx-auto">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Server className="h-5 w-5" />
-            Backend API Tester
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Button 
-            onClick={() => setShowTester(true)}
-            className="w-full"
-            variant="outline"
-          >
-            <Eye className="h-4 w-4 mr-2" />
-            Show API Tester
-          </Button>
-        </CardContent>
-      </Card>
+      import.meta.env.DEV && (
+        <Card className="w-full max-w-2xl mx-auto">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Server className="h-5 w-5" />
+              Backend API Tester
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Button 
+              onClick={() => setShowTester(true)}
+              className="w-full"
+              variant="outline"
+            >
+              <Eye className="h-4 w-4 mr-2" />
+              Show API Tester
+            </Button>
+          </CardContent>
+        </Card>
+      )
     );
   }
 

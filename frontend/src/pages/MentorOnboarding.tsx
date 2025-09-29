@@ -129,8 +129,8 @@ const MentorOnboarding = () => {
 
         {step === 4 && (
           <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">Set your hourly rate (USD) — this will be shown to mentees.</p>
-            <Input placeholder="Hourly rate" type="number" value={form.hourlyRate} onChange={e => handleChange('hourlyRate', e.target.value)} />
+            <p className="text-sm text-muted-foreground">Set your hourly rate (INR) — this will be shown to mentees.</p>
+            <Input placeholder="Hourly rate (₹)" type="number" value={form.hourlyRate} onChange={e => handleChange('hourlyRate', e.target.value)} />
             {errors.hourlyRate && <div role="alert" className="text-sm text-destructive">{errors.hourlyRate}</div>}
           </div>
         )}

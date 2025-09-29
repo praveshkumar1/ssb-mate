@@ -5,6 +5,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import GoogleSignInButton from '@/components/GoogleSignInButton';
 import Spinner from '@/components/ui/Spinner';
 
 const Register = () => {
@@ -72,30 +75,54 @@ const Register = () => {
         <h1 id="register-heading" className="text-2xl font-semibold mb-2">Create an account</h1>
         <p className="text-sm text-muted-foreground mb-6">Sign up to access coaching, sessions, and your dashboard</p>
 
-  <form onSubmit={submit} className="space-y-4" noValidate>
-          <div className="grid grid-cols-2 gap-3">
-            <Input placeholder="First name" value={form.firstName} onChange={e => handleChange('firstName', e.target.value)} />
-            <Input placeholder="Last name" value={form.lastName} onChange={e => handleChange('lastName', e.target.value)} />
-          </div>
-          <Input placeholder="Email" type="email" value={form.email} onChange={e => handleChange('email', e.target.value)} />
-          <Input placeholder="Password" type="password" value={form.password} onChange={e => handleChange('password', e.target.value)} />
+        <Tabs defaultValue="google">
+          <TabsList className="grid grid-cols-2 w-full">
+            <TabsTrigger value="google">Google</TabsTrigger>
+            <TabsTrigger value="email">Email</TabsTrigger>
+          </TabsList>
 
-          <div>
-            <label className="block text-sm font-medium mb-2">Role</label>
-            <select value={form.role} onChange={e => handleChange('role', e.target.value)} className="w-full rounded border px-3 py-2">
-              <option value="mentee">Mentee</option>
-              <option value="mentor">Mentor</option>
-            </select>
-          </div>
+          <TabsContent value="google" className="mt-6">
+            <div className="flex flex-col items-center gap-3">
+              <GoogleSignInButton className="w-full" label="Sign up with Google" />
+              <p className="text-xs text-muted-foreground text-center">
+                We currently support new registrations via Google only. You’ll set your role and complete onboarding after signing in.
+              </p>
+            </div>
+          </TabsContent>
 
-          {/* Mentor-specific details are collected in the onboarding wizard after registration */}
+          <TabsContent value="email" className="mt-6">
+            <Alert>
+              <AlertDescription>
+                Email sign-up is temporarily disabled. Please use "Sign up with Google". If you already created an email account earlier, you can sign in from the Login page.
+              </AlertDescription>
+            </Alert>
 
-          {error && <div role="alert" className="text-sm text-destructive">{error}</div>}
+            <form onSubmit={submit} className="space-y-4 mt-4 opacity-60 pointer-events-none" aria-disabled>
+              <div className="grid grid-cols-2 gap-3">
+                <Input placeholder="First name" value={form.firstName} onChange={e => handleChange('firstName', e.target.value)} />
+                <Input placeholder="Last name" value={form.lastName} onChange={e => handleChange('lastName', e.target.value)} />
+              </div>
+              <Input placeholder="Email" type="email" value={form.email} onChange={e => handleChange('email', e.target.value)} />
+              <Input placeholder="Password" type="password" value={form.password} onChange={e => handleChange('password', e.target.value)} />
 
-          <div>
-            <Button type="submit" className="w-full" size="lg" disabled={loading}>{loading ? <><Spinner className="w-4 h-4"/> Creating...</> : 'Create account'}</Button>
-          </div>
-        </form>
+              <div>
+                <label className="block text-sm font-medium mb-2">Role</label>
+                <select value={form.role} onChange={e => handleChange('role', e.target.value)} className="w-full rounded border px-3 py-2">
+                  <option value="mentee">Mentee</option>
+                  <option value="mentor">Mentor</option>
+                </select>
+              </div>
+
+              {error && <div role="alert" className="text-sm text-destructive">{error}</div>}
+
+              <div>
+                <Button type="submit" className="w-full" size="lg" disabled>
+                  <Spinner className="w-4 h-4"/> Create account
+                </Button>
+              </div>
+            </form>
+          </TabsContent>
+        </Tabs>
 
         <div className="mt-6 text-center text-sm text-muted-foreground">
           Already have an account? <Link to="/login" className="text-primary font-medium hover:underline">Sign in</Link>

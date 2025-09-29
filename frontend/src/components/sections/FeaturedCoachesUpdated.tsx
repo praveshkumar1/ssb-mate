@@ -19,14 +19,22 @@ const FeaturedCoaches = () => {
     const fetchCoaches = async () => {
       try {
         setIsLoading(true);
-        const data = await coachService.getVerifiedCoaches();
-        setCoaches(data.slice(0, 6)); // Show only first 6 coaches
+        // First try featured mentors (limit 3)
+        const featured = await coachService.getFeaturedMentors(3);
+        if (featured && featured.length > 0) {
+          setCoaches(featured.slice(0, 3));
+          setError(null);
+          return;
+        }
+        // Fallback: top rated mentors (limit 3)
+        const top = await coachService.getTopRatedCoaches(3);
+        setCoaches(top.slice(0, 3));
         setError(null);
       } catch (err: any) {
-        console.error('Failed to fetch coaches:', err);
+        console.error('Failed to fetch featured mentors:', err);
         setError(err.message);
         // Use fallback data when backend is unavailable
-        setCoaches(fallbackCoaches);
+        setCoaches(fallbackCoaches.slice(0, 3));
       } finally {
         setIsLoading(false);
       }

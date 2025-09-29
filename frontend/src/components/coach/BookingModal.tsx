@@ -42,7 +42,7 @@ const BookingModal: React.FC<Props> = ({ open, onClose, onConfirm, sessionTypes 
             {sessionTypes.map(st => (
               <button key={st.id} onClick={() => setSelectedType(st)} className={`p-2 border rounded ${selectedType?.id === st.id ? 'border-primary bg-primary/5' : ''}`}>
                 <div className="font-medium">{st.label}</div>
-                <div className="text-xs text-muted-foreground">{st.minutes} mins • {st.price ? `$${st.price}` : 'Custom'}</div>
+                <div className="text-xs text-muted-foreground">{st.minutes} mins • {st.price ? `₹${st.price}` : 'Custom'}</div>
               </button>
             ))}
           </div>
@@ -65,7 +65,7 @@ const BookingModal: React.FC<Props> = ({ open, onClose, onConfirm, sessionTypes 
 
           <div className="mt-3">
             <div className="text-sm text-muted-foreground">Price</div>
-            <div className="mt-1 font-medium">{selectedType ? (selectedType.price ? `$${selectedType.price}` : 'Custom') : '-'}</div>
+            <div className="mt-1 font-medium">{selectedType ? (selectedType.price ? `₹${selectedType.price}` : 'Custom') : '-'}</div>
           </div>
 
           <div className="mt-4">

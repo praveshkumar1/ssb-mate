@@ -93,6 +93,37 @@ router.get('/top-rated', async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/coaches/featured - Prefer featured mentors (isFeatured), fill with top-rated up to limit
+router.get('/featured', async (req: Request, res: Response) => {
+  try {
+    const { limit = 3 } = req.query;
+    const limitNum = Math.max(1, Math.min(parseInt(limit as string) || 3, 12));
+
+    // First, get featured, verified, active mentors
+    const featured = await User.find({ role: 'mentor', isActive: true, isVerified: true, isFeatured: true })
+      .select('-password')
+      .sort({ rating: -1, totalReviews: -1 })
+      .limit(limitNum)
+      .lean();
+
+    let results = featured;
+    if (featured.length < limitNum) {
+      const remaining = limitNum - featured.length;
+      const ids = featured.map(f => f._id);
+      const filler = await User.find({ role: 'mentor', isActive: true, isVerified: true, _id: { $nin: ids } })
+        .select('-password')
+        .sort({ rating: -1, totalReviews: -1 })
+        .limit(remaining)
+        .lean();
+      results = [...featured, ...filler];
+    }
+
+    return res.json({ success: true, data: results, count: results.length, timestamp: new Date().toISOString() });
+  } catch (error) {
+    return res.status(500).json({ success: false, error: 'Failed to fetch featured mentors' });
+  }
+});
+
 // GET /api/coaches/:id - Get coach by ID
 router.get('/:id', async (req: Request, res: Response) => {
   try {

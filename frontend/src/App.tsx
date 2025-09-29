@@ -13,17 +13,20 @@ import CoachProfile from './pages/CoachProfile';
 import ResourcesList from './pages/ResourcesList';
 import ResourceDetail from './pages/ResourceDetail';
 import SessionsList from './pages/SessionsList';
-import CreateSession from './pages/CreateSession';
 import DashboardSessions from './pages/DashboardSessions';
 import UserProfileEdit from './pages/UserProfileEdit';
 import CreateResource from './pages/CreateResource';
 import ProtectedRoute from './components/ProtectedRoute';
 import Dashboard from './pages/Dashboard';
 import ManageSessions from './pages/ManageSessions';
+import ManageAvailability from './pages/ManageAvailability';
 import MentorOnboarding from './pages/MentorOnboarding';
 import MenteeOnboarding from './pages/MenteeOnboarding';
 import AuthSuccess from './pages/AuthSuccess';
 import ChooseRole from './pages/ChooseRole';
+import BlogList from './pages/BlogList';
+import BlogDetail from './pages/BlogDetail';
+import BlogEditor from './pages/BlogEditor';
 
 const queryClient = new QueryClient();
 
@@ -43,12 +46,15 @@ const App = () => (
           <Route path="/resources" element={<ResourcesList />} />
           <Route path="/resources/:id" element={<ResourceDetail />} />
           <Route path="/resources/create" element={<ProtectedRoute><CreateResource /></ProtectedRoute>} />
+          <Route path="/blog" element={<BlogList />} />
+          <Route path="/blog/:id" element={<BlogDetail />} />
+          <Route path="/dashboard/blog/new" element={<ProtectedRoute><BlogEditor /></ProtectedRoute>} />
           <Route path="/sessions" element={<SessionsList />} />
-          <Route path="/sessions/create" element={<ProtectedRoute><CreateSession /></ProtectedRoute>} />
           <Route path="/profile/edit" element={<ProtectedRoute><UserProfileEdit /></ProtectedRoute>} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/dashboard/sessions" element={<ProtectedRoute><DashboardSessions /></ProtectedRoute>} />
           <Route path="/dashboard/manage-sessions" element={<ProtectedRoute><ManageSessions /></ProtectedRoute>} />
+          <Route path="/dashboard/availability" element={<ProtectedRoute><ManageAvailability /></ProtectedRoute>} />
           <Route path="/onboard/mentor" element={<ProtectedRoute><MentorOnboarding /></ProtectedRoute>} />
           <Route path="/onboard/mentee" element={<ProtectedRoute><MenteeOnboarding /></ProtectedRoute>} />
           <Route path="/choose-role" element={<ProtectedRoute><ChooseRole /></ProtectedRoute>} />

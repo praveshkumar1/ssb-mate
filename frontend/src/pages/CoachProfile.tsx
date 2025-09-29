@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import coachService from '@/services/coachService';
 import sessionService from '@/services/sessionService';
@@ -66,6 +66,30 @@ const CoachProfile: React.FC = () => {
   // Availability local to this component (declare early so hooks order is stable)
   const availability = coach?.availability || [];
 
+  // Dev-only demo slots so colors are visible when there are no real slots
+  const demoAvailability = useMemo(() => {
+    if (availability && availability.length > 0) return [] as any[];
+    if (!(import.meta as any).env?.DEV) return [] as any[];
+    const mk = (d: Date, h: number, opts?: any) => {
+      const t = new Date(d);
+      t.setHours(h, 0, 0, 0);
+      return { start: t.toISOString(), ...opts };
+    };
+    const base = new Date();
+    base.setDate(base.getDate() + 1); // tomorrow
+    const day2 = new Date(base);
+    day2.setDate(day2.getDate() + 1);
+
+    return [
+      mk(base, 9),                      // available (morning)
+      mk(base, 15, { booked: true }),   // booked (afternoon)
+      mk(base, 19, { available: false }), // unavailable (evening)
+      mk(day2, 9),
+      mk(day2, 15),
+      mk(day2, 19),
+    ];
+  }, [availability]);
+
   // if URL contains ?focus=availability, open the booking modal or scroll (run after availability is known)
   useEffect(() => {
     const params = new URLSearchParams(routerLocation.search);
@@ -95,32 +119,34 @@ const CoachProfile: React.FC = () => {
   const bio = coach?.bio || '';
   const specializations = coach?.specializations || [];
   const testimonials = coach?.testimonials || [];
-  const rate = coach?.rate ?? null;
+  const rate = (coach as any)?.hourlyRate ?? coach?.rate ?? null;
   const email = coach?.email || '';
   const phone = coach?.phoneNumber || '';
   const isVerified = Boolean(coach?.isVerified);
   const isActive = Boolean(coach?.isActive);
 
 
-  const sessionTypes = [
-    { id: 's-30', label: '30 min', minutes: 30, price: 25 },
-    { id: 's-60', label: '60 min', minutes: 60, price: 45 },
-    { id: 's-90', label: '90 min', minutes: 90, price: 65 },
-  ];
+  const sessionTypes: Array<{id: string; label: string; minutes: number; price: number | null}> = [];
+  // Single base hourly rate for computing derived prices if explicit price is not provided
+  const baseRate = (coach as any)?.hourlyRate ?? (coach as any)?.rate ?? null;
 
   // If the coach provides structured sessionTypes, prefer those
   const derivedSessionTypes = (() => {
     if (Array.isArray((coach as any)?.sessionTypes) && (coach as any).sessionTypes.length > 0) {
-      return (coach as any).sessionTypes.map((st: any, i: number) => ({
-        id: st.id || `s-${i}`,
-        label: st.label || `${st.minutes || 60} min`,
-        minutes: st.minutes || st.duration || 60,
-        price: typeof st.price === 'number' ? st.price : (typeof st.amount === 'number' ? st.amount : null)
-      }));
+      return (coach as any).sessionTypes.map((st: any, i: number) => {
+        const minutes = st.minutes || st.duration || 60;
+        const computed = typeof baseRate === 'number' ? Math.round((baseRate / 60) * minutes) : null;
+        const price = typeof st.price === 'number' ? st.price : (typeof st.amount === 'number' ? st.amount : computed);
+        return {
+          id: st.id || `s-${i}`,
+          label: st.label || `${minutes} min`,
+          minutes,
+          price,
+        };
+      });
     }
 
     // fallback: use coach.hourlyRate or rate to compute prices for common durations
-    const baseRate = (coach as any)?.hourlyRate ?? (coach as any)?.rate ?? null;
     if (typeof baseRate === 'number') {
       // hourlyRate is per hour; compute for 30/60/90
       return [
@@ -130,8 +156,8 @@ const CoachProfile: React.FC = () => {
       ];
     }
 
-    // default hard-coded tiers
-    return sessionTypes;
+    // default when no rate info: show empty list so the UI displays "Custom"
+    return [] as any[];
   })();
 
   return (
@@ -175,7 +201,7 @@ const CoachProfile: React.FC = () => {
             <div className="mt-6" id="availability-section">
               <h3>Availability</h3>
               <div className="mt-3">
-                <AvailabilityCalendar availability={availability} onSelect={(s) => { setSelectedSlot(s); setModalOpen(true); }} />
+                <AvailabilityCalendar availability={availability?.length ? availability : demoAvailability} onSelect={(s) => { setSelectedSlot(s); setModalOpen(true); }} />
               </div>
 
               {/* If the logged-in user is the coach, allow editing availability inline */}
@@ -192,8 +218,8 @@ const CoachProfile: React.FC = () => {
           <div className="p-4 border rounded space-y-4">
             <div className="text-sm text-muted-foreground">Book a session</div>
             <div className="mt-3">
-              <div className="text-lg font-semibold">{rate ? `$${rate}` : 'Custom'}</div>
-              <div className="text-xs text-muted-foreground">per session</div>
+              <div className="text-lg font-semibold">{rate ? `₹${rate}` : 'Custom'}</div>
+              <div className="text-xs text-muted-foreground">per hour</div>
             </div>
 
             <div className="mt-4">
@@ -205,7 +231,7 @@ const CoachProfile: React.FC = () => {
                         <div className="font-medium">{st.label}</div>
                         <div className="text-xs text-muted-foreground">{st.minutes} minutes</div>
                       </div>
-                      <div className="text-sm font-semibold">{st.price ? `$${st.price}` : 'Custom'}</div>
+                      <div className="text-sm font-semibold">{st.price ? `₹${st.price}` : 'Custom'}</div>
                     </div>
                   </button>
                 ))}

@@ -84,7 +84,7 @@ router.get('/profile', authenticateToken, async (req: Request, res: Response) =>
       return res.status(401).json({ success: false, error: 'Authentication required' });
     }
 
-    const found = await User.findById(userId).select('-password');
+  const found = await User.findById(userId).select('-password');
     if (!found) {
       apiLogger.warn('Authenticated user not found', {
         endpoint: '/api/users/profile',
@@ -100,7 +100,23 @@ router.get('/profile', authenticateToken, async (req: Request, res: Response) =>
       ip: clientIP
     });
 
-    return res.json({ success: true, data: found, timestamp: new Date().toISOString() });
+    // Normalize availability: convert legacy "start|end" and single ISO strings to structured objects for the frontend
+    const doc: any = found?.toObject ? found.toObject() : found;
+    if (doc && Array.isArray(doc.availability)) {
+      doc.availability = doc.availability.map((a: any) => {
+        if (!a) return a;
+        if (typeof a === 'string') {
+          if (a.includes('|')) {
+            const [s, e] = a.split('|');
+            return { start: s, end: e };
+          }
+          return { start: a };
+        }
+        return a;
+      });
+    }
+
+    return res.json({ success: true, data: doc, timestamp: new Date().toISOString() });
   } catch (error) {
     const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
     apiLogger.error('Error fetching user profile', {
@@ -150,6 +166,25 @@ router.put('/profile', authenticateToken, async (req: Request, res: Response) =>
       if (f in updates && typeof updates[f] === 'string') {
         updates[f] = updates[f].split(',').map((s: string) => s.trim()).filter(Boolean);
       }
+    }
+
+    // Availability normalization: accept structured objects or strings; store as structured objects {start,end?}
+    if ('availability' in updates && Array.isArray(updates.availability)) {
+      updates.availability = updates.availability.map((a: any) => {
+        if (!a) return a;
+        if (typeof a === 'string') {
+          if (a.includes('|')) {
+            const [s, e] = a.split('|');
+            return { start: new Date(s).toISOString(), end: new Date(e).toISOString() };
+          }
+          return { start: new Date(a).toISOString() };
+        }
+        const s = a.start || a.iso || null;
+        const e = a.end || a.until || null;
+        if (s && e) return { start: new Date(s).toISOString(), end: new Date(e).toISOString() };
+        if (s) return { start: new Date(s).toISOString() };
+        return a;
+      });
     }
 
     // Update the user document

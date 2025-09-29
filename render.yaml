@@ -13,5 +13,7 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      - key: NPM_CONFIG_PRODUCTION
+        value: 'false'
     # Add your other env vars in Render dashboard:
     # MONGODB_URI, JWT_SECRET, MAILGUN_API_KEY, etc.

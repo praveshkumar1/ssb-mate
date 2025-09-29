@@ -6,6 +6,7 @@ import { toast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import GoogleSignInButton from '@/components/GoogleSignInButton';
 
 const Login = () => {
@@ -75,38 +76,54 @@ const Login = () => {
         <h1 id="login-heading" className="text-2xl font-semibold mb-2">Welcome back</h1>
         <p className="text-sm text-muted-foreground mb-6">Sign in to access your dashboard and manage your profile</p>
 
-        <form onSubmit={submit} className="space-y-4" noValidate>
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-foreground">Email</label>
-            <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} aria-required="true" aria-label="Email address" />
-          </div>
+        <Tabs defaultValue="google" className="mt-2">
+          <TabsList className="grid grid-cols-2 w-full">
+            <TabsTrigger value="google">Google</TabsTrigger>
+            <TabsTrigger value="email">Email</TabsTrigger>
+          </TabsList>
 
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-foreground">Password</label>
-            <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} aria-required="true" aria-label="Password" />
-          </div>
+          <TabsContent value="google" className="mt-6">
+            <div className="flex flex-col items-center gap-3">
+              <GoogleSignInButton className="w-full" label="Continue with Google" />
+              <p className="text-xs text-muted-foreground text-center">
+                Recommended for best experience. We’ll keep you signed in using a secure cookie.
+              </p>
+              <div className="text-center text-sm text-muted-foreground">
+                New here? <Link to="/register" className="text-primary font-medium hover:underline">Create an account</Link>
+              </div>
+            </div>
+          </TabsContent>
 
-          <div className="flex items-center justify-between">
-            <label className="flex items-center gap-2 text-sm">
-              <Checkbox checked={remember} onCheckedChange={(v) => setRemember(Boolean(v))} />
-              <span>Remember me</span>
-            </label>
-            <Link to="/forgot-password" className="text-sm text-primary hover:underline">Forgot password?</Link>
-          </div>
+          <TabsContent value="email" className="mt-6">
+            <form onSubmit={submit} className="space-y-4" noValidate>
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-foreground">Email</label>
+                <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} aria-required="true" aria-label="Email address" />
+              </div>
 
-          {error && <div role="alert" className="text-sm text-destructive">{error}</div>}
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-foreground">Password</label>
+                <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} aria-required="true" aria-label="Password" />
+              </div>
 
-          <div>
-            <Button type="submit" className="w-full" size="lg" aria-label="Sign in" disabled={loading}>
-              {loading ? 'Signing in...' : 'Sign in'}
-            </Button>
-          </div>
-        </form>
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2 text-sm">
+                  <Checkbox checked={remember} onCheckedChange={(v) => setRemember(Boolean(v))} />
+                  <span>Remember me</span>
+                </label>
+                <Link to="/forgot-password" className="text-sm text-primary hover:underline">Forgot password?</Link>
+              </div>
 
-        <div className="mt-6 flex flex-col gap-3">
-          <GoogleSignInButton className="mx-auto" />
-          <div className="text-center text-sm text-muted-foreground">New here? <Link to="/register" className="text-primary font-medium hover:underline">Create an account</Link></div>
-        </div>
+              {error && <div role="alert" className="text-sm text-destructive">{error}</div>}
+
+              <div>
+                <Button type="submit" className="w-full" size="lg" aria-label="Sign in" disabled={loading}>
+                  {loading ? 'Signing in...' : 'Sign in'}
+                </Button>
+              </div>
+            </form>
+          </TabsContent>
+        </Tabs>
       </section>
     </main>
   );

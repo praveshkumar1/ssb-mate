@@ -6,7 +6,6 @@ import Spinner from '@/components/ui/Spinner';
 import { apiClient } from '@/services/api';
 import { sessionService } from '@/services/sessionService';
 import { useToast } from '@/hooks/use-toast';
-import ManageAvailabilityPanel from '@/components/coach/ManageAvailabilityPanel';
 import QuickEditProfileModal from '@/components/QuickEditProfileModal';
 import TagInput from '@/components/ui/TagInput';
 
@@ -132,7 +131,7 @@ const Dashboard = () => {
             </div>
           ) : (
             <div className="flex items-center justify-between">
-              <div className="text-lg font-semibold">{profile?.hourlyRate ? `$${profile.hourlyRate}` : 'Not set'}</div>
+              <div className="text-lg font-semibold">{profile?.hourlyRate ? `₹${profile.hourlyRate}` : 'Not set'}</div>
               <button className="text-sm text-muted-foreground" onClick={() => setEditing(true)}>Edit</button>
             </div>
           )}
@@ -186,7 +185,6 @@ const Dashboard = () => {
                   <h3 className="text-sm font-medium">Quick Links</h3>
                   <div className="mt-3 flex flex-col gap-2">
                     <Button variant="ghost" onClick={() => navigate('/coaches')}>Find Coaches</Button>
-                    <Button variant="ghost" onClick={() => navigate('/sessions/create')}>Create Session</Button>
                     <Button variant="ghost" onClick={() => navigate('/resources')}>Resources</Button>
                   </div>
                 </div>
@@ -252,6 +250,8 @@ const Dashboard = () => {
                         <div className="text-sm text-muted-foreground">{(profile?.rating ?? 0).toFixed(1)} / 5</div>
                       </div>
                     </div>
+
+                    {/* Manage Availability card removed to declutter dashboard. Use the dedicated page via Sidebar. */}
                   </>
                 ) : (
                   <div className="p-4 bg-background rounded shadow-sm">

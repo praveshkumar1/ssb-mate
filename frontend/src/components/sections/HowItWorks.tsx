@@ -35,7 +35,7 @@ const HowItWorks = () => {
   ];
 
   return (
-    <section id="how-it-works" className="py-20 gradient-subtle">
+    <section id="how-it-works" className="py-20 gradient-subtle scroll-mt-24">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-center mb-16">

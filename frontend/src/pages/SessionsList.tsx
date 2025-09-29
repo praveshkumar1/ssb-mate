@@ -25,9 +25,7 @@ const SessionsList = () => {
           </div>
         ))}
       </div>
-      <div className="mt-4">
-        <Link to="/sessions/create" className="text-primary">Create session</Link>
-      </div>
+      {/* Create session removed for now */}
     </div>
   );
 };

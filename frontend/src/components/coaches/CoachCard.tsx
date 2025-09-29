@@ -52,8 +52,8 @@ export const CoachCard = ({ coach, onBookSession }: CoachCardProps) => {
               </div>
 
               <div className="text-right">
-                <div className="text-base font-semibold">{coach.hourly_rate ? `$${coach.hourly_rate}` : 'Custom'}</div>
-                <div className="text-xs text-muted-foreground">per session</div>
+                <div className="text-base font-semibold">{coach.hourly_rate ? `₹${coach.hourly_rate}` : 'Custom'}</div>
+                <div className="text-xs text-muted-foreground">per hour</div>
               </div>
             </div>
 
