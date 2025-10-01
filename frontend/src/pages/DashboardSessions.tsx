@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { CoachCard } from '@/components/coaches/CoachCard';
 import { useToast } from '@/hooks/use-toast';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Menu } from 'lucide-react';
 
 const DashboardSessions = () => {
   const [upcoming, setUpcoming] = useState<any[]>([]);
@@ -63,9 +65,26 @@ const DashboardSessions = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 flex gap-6">
-        <Sidebar />
+        {/* Desktop sidebar */}
+        <div className="hidden md:block">
+          <Sidebar />
+        </div>
 
         <main className="flex-1">
+          {/* Mobile sidebar toggle (inside main so it doesn't consume a flex column) */}
+          <div className="md:hidden mb-4">
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="sm" className="inline-flex items-center gap-2">
+                  <Menu className="h-4 w-4" />
+                  Menu
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="p-0 w-72">
+                <Sidebar forceVisible />
+              </SheetContent>
+            </Sheet>
+          </div>
           <div className="bg-card p-6 rounded shadow">
             <h2 className="text-xl font-semibold">Sessions</h2>
             <div className="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-6">

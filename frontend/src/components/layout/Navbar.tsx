@@ -84,8 +84,8 @@ const Navbar = () => {
                     {isDropdownOpen && (
                       <div id="profile-menu" role="menu" className="absolute right-0 mt-2 w-44 bg-card rounded shadow-lg py-1 z-50 ring-1 ring-black/5" aria-label="Profile menu">
                         <Link ref={firstMenuItemRef as React.Ref<HTMLAnchorElement>} to="/dashboard/" className="block px-4 py-2 text-sm text-foreground hover:bg-muted" role="menuitem" onClick={() => setIsDropdownOpen(false)}>Account</Link>
-                        <Link to="/settings" className="block px-4 py-2 text-sm text-foreground hover:bg-muted" role="menuitem" onClick={() => setIsDropdownOpen(false)}>Settings</Link>
-                        <button className="w-full text-left px-4 py-2 text-sm text-destructive hover:bg-muted" role="menuitem" onClick={() => { auth.logout(); setIsDropdownOpen(false); window.location.href = '/#about'; }}>Logout</button>
+                        <Link to="/profile/edit" className="block px-4 py-2 text-sm text-foreground hover:bg-muted" role="menuitem" onClick={() => setIsDropdownOpen(false)}>Settings</Link>
+                        <button className="w-full text-left px-4 py-2 text-sm text-destructive hover:bg-muted" role="menuitem" onClick={() => { auth.logout(); setIsDropdownOpen(false); window.location.href = '/'; }}>Logout</button>
                       </div>
                     )}
                   </div>
@@ -127,15 +127,13 @@ const Navbar = () => {
               <Link to="/#blog" className="text-foreground hover:text-primary block px-3 py-2 rounded-md text-base font-medium" onClick={() => setIsMenuOpen(false)}>
                 SSB Tips
               </Link>
-              <Link to="/#about" className="text-foreground hover:text-primary block px-3 py-2 rounded-md text-base font-medium" onClick={() => setIsMenuOpen(false)}>
-                About
-              </Link>
+              {/* About removed from mobile nav */}
               <div className="flex flex-col space-y-2 pt-4">
                 {auth.isAuthenticated ? (
                   <>
-                    <Link to="/profile/edit" onClick={() => setIsMenuOpen(false)}><Button className="justify-start">Account</Button></Link>
-                    <Link to="/settings" onClick={() => setIsMenuOpen(false)}><Button className="justify-start">Settings</Button></Link>
-                    <Button className="justify-start text-destructive" onClick={() => { auth.logout(); window.location.href = '/#about'; }}>Logout</Button>
+                    <Link to="/dashboard" onClick={() => setIsMenuOpen(false)}><Button className="justify-start">Account</Button></Link>
+                    <Link to="/profile/edit" onClick={() => setIsMenuOpen(false)}><Button className="justify-start">Settings</Button></Link>
+                    <Button variant="outline" size="sm" className="justify-start w-auto self-start text-destructive" onClick={() => { auth.logout(); window.location.href = '/'; }}>Logout</Button>
                   </>
                 ) : (
                   <>

@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import Sidebar from '@/components/layout/Sidebar';
 import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Menu } from 'lucide-react';
 import Spinner from '@/components/ui/Spinner';
 import { apiClient } from '@/services/api';
 import { sessionService } from '@/services/sessionService';
 import { useToast } from '@/hooks/use-toast';
-import QuickEditProfileModal from '@/components/QuickEditProfileModal';
 import TagInput from '@/components/ui/TagInput';
 
 const renderPerson = (p: any) => {
@@ -29,7 +30,7 @@ const Dashboard = () => {
 
   const [profile, setProfile] = useState<any>(null);
   const [sessions, setSessions] = useState<any[]>([]);
-  const [quickEditOpen, setQuickEditOpen] = useState(false);
+  // quick edit removed
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<any>(null);
   const [avatarPulseKey, setAvatarPulseKey] = useState(0);
@@ -143,8 +144,26 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 flex gap-6">
-        <Sidebar />
+        {/* Desktop sidebar */}
+        <div className="hidden md:block">
+          <Sidebar />
+        </div>
+
         <main className="flex-1">
+          {/* Mobile sidebar toggle (inside main so it doesn't consume a flex column) */}
+          <div className="md:hidden mb-4">
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="sm" className="inline-flex items-center gap-2">
+                  <Menu className="h-4 w-4" />
+                  Menu
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="p-0 w-72">
+                <Sidebar forceVisible />
+              </SheetContent>
+            </Sheet>
+          </div>
           <div className="bg-card p-6 rounded shadow">
             <h2 className="text-xl font-semibold">{isMentor ? 'Mentor Dashboard' : `Welcome${profile?.firstName ? `, ${profile.firstName}` : ''}`}</h2>
             <p className="text-sm text-muted-foreground">Quick view of your account. Complete your profile to get the most out of the platform.</p>
@@ -176,7 +195,9 @@ const Dashboard = () => {
                         ))}
                       </ul>
                     ) : (
-                      <div className="mt-3 text-sm text-muted-foreground">No upcoming sessions yet. Share your availability to start getting bookings.</div>
+                      <div className="mt-3 text-sm text-muted-foreground">
+                        {isMentor ? 'No upcoming sessions yet. Share your availability to start getting bookings.' : 'No upcoming sessions yet. Book a session with a coach to get started.'}
+                      </div>
                     )
                   )}
                 </div>
@@ -265,16 +286,10 @@ const Dashboard = () => {
                   <h3 className="text-sm font-medium">Manage</h3>
                   <div className="mt-3 flex gap-2 justify-end">
                     <Button variant="secondary" onClick={() => navigate('/profile/edit')}>Edit profile</Button>
-                    <Button variant="outline" onClick={() => setQuickEditOpen(true)}>Quick edit</Button>
                   </div>
                 </div>
               </div>
             </div>
-            <QuickEditProfileModal open={quickEditOpen} onClose={() => setQuickEditOpen(false)} profile={profile} onSaved={(updated: any) => {
-              const newProfile = updated?.data ?? updated;
-              setProfile(newProfile);
-              setAvatarPulseKey(k => k + 1);
-            }} />
           </div>
         </main>
       </div>

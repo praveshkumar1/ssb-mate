@@ -1,8 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Star, Users, Award, CheckCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const HeroSection = () => {
+    const navigate = useNavigate();
   return (
   <section className="relative overflow-hidden gradient-subtle py-20 lg:py-32" aria-labelledby="hero-heading">
       {/* Background decoration */}
@@ -53,12 +55,12 @@ const HeroSection = () => {
           
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center animate-slide-up">
-            <Button size="lg" variant="hero" className="px-8 py-6 text-lg" aria-label="Find your coach"> 
+            <Button size="lg" variant="hero" className="px-8 py-6 text-lg" aria-label="Find your coach" onClick={() => navigate('/coaches')}> 
               Find Your Coach
             </Button>
-            <Button size="lg" variant="trust" className="px-8 py-6 text-lg" aria-label="Browse success stories">
+            {/* <Button size="lg" variant="trust" className="px-8 py-6 text-lg" aria-label="Browse success stories">
               Browse Success Stories
-            </Button>
+            </Button> */}
           </div>
           
           {/* Trust indicators */}

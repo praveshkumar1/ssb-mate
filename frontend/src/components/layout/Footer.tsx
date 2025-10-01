@@ -50,7 +50,7 @@ const Footer = () => {
               <h4 className="text-lg font-semibold text-foreground">Quick Links</h4>
               <ul className="space-y-2">
                 <li>
-                  <a href="/#coaches" className="text-muted-foreground hover:text-primary transition-smooth" aria-label="Find Coaches">
+                  <a href="/coaches" className="text-muted-foreground hover:text-primary transition-smooth" aria-label="Find Coaches">
                     Find Coaches
                   </a>
                 </li>

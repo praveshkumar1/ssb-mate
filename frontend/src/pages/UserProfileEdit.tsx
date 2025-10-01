@@ -6,6 +6,12 @@ import { apiClient } from '@/services/api';
 import { useToast } from '@/components/ui/use-toast';
 import TagInput from '@/components/ui/TagInput';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Separator } from '@/components/ui/separator';
 
 const UserProfileEdit = () => {
   const [storedUser, setStoredUser] = useState<any>(authService.getCurrentUser());
@@ -145,59 +151,82 @@ const UserProfileEdit = () => {
   if (!storedUser && !token && loadingProfile) return <div className="p-4">Loading profile...</div>;
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="max-w-4xl mx-auto bg-card rounded shadow p-6">
-        <h1 className="text-2xl font-bold mb-4">Edit Profile</h1>
-        <form onSubmit={submit} className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="col-span-1 flex flex-col items-center gap-4">
-            <div className="w-36 h-36 rounded-full overflow-hidden bg-muted flex items-center justify-center">
-              <img src={previewUrl || form.profileImageUrl || '/avatars/soldier_male.png'} alt="avatar" className="w-36 h-36 object-cover" />
-            </div>
-            <label className="text-sm">Profile photo</label>
-            <input type="file" accept="image/*" onChange={onFileChange} />
-            <div className="text-xs text-muted-foreground">Recommended: square image, under 2MB</div>
+    <main className="container mx-auto p-6">
+      <div className="max-w-5xl mx-auto space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">Edit Profile</h1>
+            <p className="text-sm text-muted-foreground">Update your personal information and how others see you.</p>
           </div>
+        </div>
 
-          <div className="col-span-2 space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div>
-                <label className="text-sm block mb-1">First name</label>
-                <input className="w-full p-2 border rounded" value={form.firstName || ''} onChange={e => setForm({ ...form, firstName: e.target.value })} />
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle>Profile</CardTitle>
+            <CardDescription>Your avatar and basic details</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={submit} className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="col-span-1">
+                <div className="flex flex-col items-center gap-4">
+                  <Avatar className="h-36 w-36">
+                    <AvatarImage src={previewUrl || form.profileImageUrl || '/avatars/soldier_male.png'} alt="avatar" />
+                    <AvatarFallback>
+                      {(form.firstName?.[0] || 'U').toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="w-full space-y-2">
+                    <Label htmlFor="avatar">Profile photo</Label>
+                    <Input id="avatar" type="file" accept="image/*" onChange={onFileChange} />
+                    <p className="text-xs text-muted-foreground">Recommended: square JPG/PNG under 2MB</p>
+                  </div>
+                </div>
               </div>
-              <div>
-                <label className="text-sm block mb-1">Last name</label>
-                <input className="w-full p-2 border rounded" value={form.lastName || ''} onChange={e => setForm({ ...form, lastName: e.target.value })} />
+
+              <div className="col-span-2 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="firstName">First name</Label>
+                    <Input id="firstName" value={form.firstName || ''} onChange={e => setForm({ ...form, firstName: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label htmlFor="lastName">Last name</Label>
+                    <Input id="lastName" value={form.lastName || ''} onChange={e => setForm({ ...form, lastName: e.target.value })} />
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="education">Education</Label>
+                  <Input id="education" value={form.education || ''} onChange={e => setForm({ ...form, education: e.target.value })} />
+                </div>
+
+                <div>
+                  <Label htmlFor="bio">Bio</Label>
+                  <Textarea id="bio" rows={4} value={form.bio || ''} onChange={e => setForm({ ...form, bio: e.target.value })} />
+                </div>
+
+                <Separator />
+
+                <div>
+                  <Label>Achievements</Label>
+                  <TagInput id="achievements-edit" value={form.achievements || []} onChange={(v) => setForm({ ...form, achievements: v })} placeholder="Add achievement and press Enter" />
+                </div>
+
+                <div>
+                  <Label>Skills</Label>
+                  <TagInput id="skills-edit" value={form.skills || []} onChange={(v) => setForm({ ...form, skills: v })} placeholder="Add a skill and press Enter" suggestions={["Communication","Leadership","Product","Engineering","UX","Coaching"]} />
+                </div>
+
+                <div className="flex gap-3 justify-end pt-2">
+                  <Button type="button" variant="ghost" onClick={() => navigate('/dashboard')}>Cancel</Button>
+                  <Button type="submit" disabled={loading}>{loading ? 'Saving...' : 'Save changes'}</Button>
+                </div>
               </div>
-            </div>
-
-            <div>
-              <label className="text-sm block mb-1">Education</label>
-              <input className="w-full p-2 border rounded" value={form.education || ''} onChange={e => setForm({ ...form, education: e.target.value })} />
-            </div>
-
-            <div>
-              <label className="text-sm block mb-1">Bio</label>
-              <textarea className="w-full p-2 border rounded" rows={4} value={form.bio || ''} onChange={e => setForm({ ...form, bio: e.target.value })} />
-            </div>
-
-            <div>
-              <label className="text-sm block mb-1">Achievements</label>
-              <TagInput id="achievements-edit" value={form.achievements || []} onChange={(v) => setForm({ ...form, achievements: v })} placeholder="Add achievement and press Enter" />
-            </div>
-
-            <div>
-              <label className="text-sm block mb-1">Skills</label>
-              <TagInput id="skills-edit" value={form.skills || []} onChange={(v) => setForm({ ...form, skills: v })} placeholder="Add a skill and press Enter" suggestions={["Communication","Leadership","Product","Engineering","UX","Coaching"]} />
-            </div>
-
-            <div className="flex gap-3 justify-end">
-              <Button variant="ghost" onClick={() => navigate('/dashboard')}>Cancel</Button>
-              <Button type="submit">{loading ? 'Saving...' : 'Save profile'}</Button>
-            </div>
-          </div>
-        </form>
+            </form>
+          </CardContent>
+        </Card>
       </div>
-    </div>
+    </main>
   );
 };
 
