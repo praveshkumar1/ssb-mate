@@ -11,8 +11,10 @@ import fs from 'fs';
 const router = Router();
 
 // Configure multer storage for avatars
-// Use repository root uploads directory so runtime paths are consistent
-const avatarsDir = path.join(process.cwd(), 'backend', 'uploads', 'avatars');
+// Resolve relative to this file's folder (src/routes or dist/routes) to always map to backend/uploads/avatars
+// In dev (ts-node): __dirname = backend/src/routes => ../../uploads/avatars => backend/uploads/avatars
+// In prod (compiled): __dirname = backend/dist/routes => ../../uploads/avatars => backend/uploads/avatars
+const avatarsDir = path.resolve(__dirname, '../../uploads/avatars');
 try {
   if (!fs.existsSync(avatarsDir)) {
     fs.mkdirSync(avatarsDir, { recursive: true });
@@ -56,13 +58,22 @@ router.post('/upload', authenticateToken, upload.single('avatar'), async (req: R
     }
 
     // Build public URL for the uploaded file
-    const host = process.env.APP_BASE_URL || `http://localhost:${process.env.PORT || 8080}`;
-    const relativePath = path.posix.join('/uploads', 'avatars', file.filename);
-    const fileUrl = host + relativePath;
+    const forwardedProto = (req.headers['x-forwarded-proto'] as string) || req.protocol;
+    const forwardedHost = (req.headers['x-forwarded-host'] as string) || req.get('host');
+    const appBase = process.env.APP_BASE_URL || `${forwardedProto}://${forwardedHost}`;
+  const relativePath = path.posix.join('/uploads', 'avatars', file.filename);
+  const fileUrl = appBase + relativePath;
+  const absoluteFsPath = path.join(avatarsDir, file.filename);
+  const exists = fs.existsSync(absoluteFsPath);
 
     apiLogger.info('Avatar uploaded', { endpoint: '/api/users/upload', file: file.filename, user: (req as any).user?.userId });
 
-    return res.json({ success: true, data: { url: fileUrl, filename: file.filename }, timestamp: new Date().toISOString() });
+    const payload: any = { url: fileUrl, filename: file.filename, path: relativePath };
+    if (process.env.NODE_ENV !== 'production') {
+      payload.exists = exists;
+      payload.fsPath = absoluteFsPath;
+    }
+    return res.json({ success: true, data: payload, timestamp: new Date().toISOString() });
   } catch (error) {
     logger.error('Error uploading avatar:', error);
     return res.status(500).json({ success: false, error: 'Failed to upload file' });

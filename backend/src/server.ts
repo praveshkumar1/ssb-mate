@@ -37,7 +37,11 @@ const limiter = rateLimit({
 });
 
 // Middleware
-app.use(helmet());
+// Allow cross-origin resource embedding for static assets (e.g., images from /uploads)
+// This avoids CORP blocking when the frontend (localhost:5173) loads images from backend (localhost:8080)
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' }
+}));
 app.use(compression());
 app.use(limiter);
 

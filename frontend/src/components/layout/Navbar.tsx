@@ -70,7 +70,7 @@ const Navbar = () => {
               (() => {
                 const user = auth.user;
                 const initials = user ? ((user.firstName?.[0] || '') + (user.lastName?.[0] || '')).toUpperCase() : 'U';
-                const avatarUrl = user?.avatarUrl || user?.avatar || null;
+                const avatarUrl = user?.profileImageUrl || user?.avatarUrl || user?.avatar || null;
                 return (
                   <div className="relative" ref={dropdownRef}>
                     <Button variant="ghost" onClick={() => setIsDropdownOpen(o => !o)} aria-haspopup="true" aria-expanded={isDropdownOpen} aria-controls="profile-menu">
