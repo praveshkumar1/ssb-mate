@@ -61,46 +61,38 @@ class ApiClient {
 
     try {
       const response = await fetch(url, config);
-      
       const data = await response.json();
-      
+
       if (!response.ok) {
-            // If CSRF middleware blocks the request, clear client auth state and redirect to login
-            if (response.status === 403 && (data && (data.error === 'Invalid CSRF token' || data.message === 'Invalid CSRF token'))) {
-              try {
-                // best-effort: clear local auth and navigate to login
-                localStorage.removeItem('token');
-                localStorage.removeItem('user');
-                try {
-                  // show a toast if available and set a short-lived session flag so login page can display a message
-                  // Note: import meta can't be used here; use global toast if available
-                  // Set a session flag the login page can read
-                  sessionStorage.setItem('auth:reason', 'session_expired_csrf');
-                } catch (e) {
-                  // ignore
-                }
-                // show an inline toast if the global toast helper is exposed
-                try {
-                  // eslint-disable-next-line @typescript-eslint/no-var-requires
-                  const { toast } = require('@/hooks/use-toast');
-                  if (toast) toast({ title: 'Session expired', description: 'Please sign in again' });
-                } catch (e) {
-                  // ignore failures to load toast
-                }
-                window.location.href = '/login';
-              } catch (e) {
-                // ignore
-              }
+        // Global UX for auth failures / CSRF errors
+        if (
+          response.status === 401 ||
+          (response.status === 403 && data && (data.error === 'Invalid CSRF token' || data.message === 'Invalid CSRF token'))
+        ) {
+          try {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            sessionStorage.setItem('auth:reason', response.status === 401 ? 'session_expired' : 'session_expired_csrf');
+          } catch {}
+          try {
+            // eslint-disable-next-line @typescript-eslint/no-var-requires
+            const { toast } = require('@/hooks/use-toast');
+            if (toast) {
+              toast({ title: 'Session expired', description: 'Please sign in again' });
             }
-            
-            const err: any = new Error(data.error || data.message || `HTTP error! status: ${response.status}`);
-            err.status = response.status;
-            err.data = data;
-            throw err;
+          } catch {}
+          // redirect after a short tick so toast can render
+          setTimeout(() => { window.location.href = '/login'; }, 50);
+        }
+
+        const err: any = new Error(data?.error || data?.message || `HTTP error! status: ${response.status}`);
+        err.status = response.status;
+        err.data = data;
+        throw err;
       }
-      
+
       // Return the data from the response for successful requests
-      return data.data !== undefined ? data.data : data;
+      return data?.data !== undefined ? data.data : data;
     } catch (error) {
       console.error('API request failed:', error);
       throw error;

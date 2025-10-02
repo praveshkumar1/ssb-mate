@@ -19,7 +19,7 @@ const UserProfileEdit = () => {
   const token = authService.getToken();
   const [form, setForm] = useState<any>({ achievements: [], skills: [] });
   const [loading, setLoading] = useState(false);
-  const [loadingProfile, setLoadingProfile] = useState(false);
+  const [loadingProfile, setLoadingProfile] = useState(true);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -28,18 +28,24 @@ const UserProfileEdit = () => {
   useEffect(() => {
     if (storedUser) {
       setForm((prev: any) => ({ ...prev, ...storedUser }));
+      setLoadingProfile(false);
       return;
     }
 
     const fetchUserFromApi = async () => {
-      if (!token) return;
       setLoadingProfile(true);
       try {
         const resp: any = await apiClient.get('/users/profile');
         const found = resp?.data ?? resp;
         if (found) {
           setForm((prev: any) => ({ ...prev, ...found }));
-          auth.login(token, found);
+          // If we have a token, use normal login; otherwise, store user and refresh context
+          if (token) {
+            auth.login(token, found);
+          } else {
+            localStorage.setItem('user', JSON.stringify(found));
+            auth.refresh();
+          }
           setStoredUser(found);
         }
       } catch (err) {
@@ -101,13 +107,6 @@ const UserProfileEdit = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      if (!token) {
-        toast({ title: 'Not authenticated', description: 'Please sign in to edit your profile' });
-        navigate('/login', { replace: true });
-        setLoading(false);
-        return;
-      }
-
       const payload: any = { ...form };
 
       // if a new avatar is selected upload it first
@@ -129,7 +128,12 @@ const UserProfileEdit = () => {
       const resp: any = await apiClient.put('/users/profile', payload);
       const updated = resp?.data ?? resp;
       toast({ title: 'Profile updated', description: 'Your profile has been saved' });
-      auth.login(token, updated);
+      if (token) {
+        auth.login(token, updated);
+      } else {
+        localStorage.setItem('user', JSON.stringify(updated));
+        auth.refresh();
+      }
       setStoredUser(updated);
       setForm(updated);
       // cleanup preview URL
@@ -147,8 +151,7 @@ const UserProfileEdit = () => {
     setLoading(false);
   };
 
-  if (!storedUser && !token && !loadingProfile) return <div className="p-4">Please login to edit your profile</div>;
-  if (!storedUser && !token && loadingProfile) return <div className="p-4">Loading profile...</div>;
+  if (loadingProfile) return <div className="p-4">Loading profile...</div>;
 
   return (
     <main className="container mx-auto p-6">

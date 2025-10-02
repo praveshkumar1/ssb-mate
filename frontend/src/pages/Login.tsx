@@ -18,11 +18,11 @@ const Login = () => {
   const navigate = useNavigate();
   const auth = useAuth();
 
-  // Show friendly message if redirected due to CSRF/session expiry
+  // Show friendly message if redirected due to session expiry (401) or CSRF (403)
   useState(() => {
     try {
       const reason = sessionStorage.getItem('auth:reason');
-      if (reason === 'session_expired_csrf') {
+      if (reason === 'session_expired' || reason === 'session_expired_csrf') {
         toast({ title: 'Session expired', description: 'Please sign in again' });
         sessionStorage.removeItem('auth:reason');
       }

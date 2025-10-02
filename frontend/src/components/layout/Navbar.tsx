@@ -44,7 +44,7 @@ const Navbar = () => {
           {/* Logo */}
           <div className="flex-shrink-0">
             <Link to="/" className="flex items-center">
-              <img src="/public/logo.png" alt="SSB MATE" className="h-16 w-16 mr-2" />
+              <img src="/logo.png" alt="SSB MATE" className="h-16 w-16 mr-2" />
               <span className="text-2xl font-bold text-primary">SSB MATE</span>
             </Link>
           </div>

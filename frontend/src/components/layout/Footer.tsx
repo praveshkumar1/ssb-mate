@@ -64,16 +64,6 @@ const Footer = () => {
                     SSB Tips & Blog
                   </a>
                 </li>
-                <li>
-                  <a href="#success-stories" className="text-muted-foreground hover:text-primary transition-smooth">
-                    Success Stories
-                  </a>
-                </li>
-                <li>
-                  <a href="#pricing" className="text-muted-foreground hover:text-primary transition-smooth">
-                    Pricing
-                  </a>
-                </li>
               </ul>
             </div>
 
