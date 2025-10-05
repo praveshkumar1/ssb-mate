@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
+import supabase from '@/services/supabase';
 
 const UserProfileEdit = () => {
   const [storedUser, setStoredUser] = useState<any>(authService.getCurrentUser());
@@ -109,19 +110,53 @@ const UserProfileEdit = () => {
     try {
       const payload: any = { ...form };
 
-      // if a new avatar is selected upload it first
+      // if a new avatar is selected, upload it first
       if (selectedFile) {
         try {
           const resizedBlob = await resizeImage(selectedFile, 1024, 0.8);
-          const uploadForm = new FormData();
-          const uploadFile = new File([resizedBlob], selectedFile.name.replace(/\s+/g, '_'), { type: 'image/jpeg' });
-          uploadForm.append('avatar', uploadFile);
-          const uploadResp: any = await apiClient.request('/users/upload', { method: 'POST', body: uploadForm });
-          const url = uploadResp?.data?.url ?? uploadResp?.url ?? uploadResp;
-          if (url) payload.profileImageUrl = url;
-        } catch (uploadErr) {
+          const fileName = selectedFile.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
+          const ext = fileName.includes('.') ? fileName.split('.').pop() : 'jpg';
+          const safeName = `${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
+
+          // If frontend Supabase is configured, upload directly using anon key
+          if (supabase && import.meta.env.VITE_SUPABASE_BUCKET) {
+            const bucket = import.meta.env.VITE_SUPABASE_BUCKET as string;
+            const userId = (storedUser?._id || storedUser?.id || 'public').toString();
+            const objectPath = `profiles/${userId}/${safeName}`;
+            try {
+              const { error: upErr } = await supabase.storage.from(bucket).upload(objectPath, resizedBlob, {
+                contentType: 'image/jpeg',
+                upsert: false
+              });
+              if (upErr) throw upErr;
+              const { data: pub } = supabase.storage.from(bucket).getPublicUrl(objectPath);
+              const url = pub?.publicUrl;
+              if (url) payload.profileImageUrl = url;
+            } catch (err) {
+              const fallback = (import.meta.env.VITE_UPLOAD_BACKEND_FALLBACK as string) === 'true';
+              if (fallback) {
+                const uploadForm = new FormData();
+                const uploadFile = new File([resizedBlob], fileName || 'avatar.jpg', { type: 'image/jpeg' });
+                uploadForm.append('avatar', uploadFile);
+                const uploadResp: any = await apiClient.request('/users/upload', { method: 'POST', body: uploadForm });
+                const url = uploadResp?.data?.url ?? uploadResp?.url ?? uploadResp;
+                if (url) payload.profileImageUrl = url;
+              } else {
+                throw err;
+              }
+            }
+          } else {
+            // Fallback to backend upload endpoint
+            const uploadForm = new FormData();
+            const uploadFile = new File([resizedBlob], fileName || 'avatar.jpg', { type: 'image/jpeg' });
+            uploadForm.append('avatar', uploadFile);
+            const uploadResp: any = await apiClient.request('/users/upload', { method: 'POST', body: uploadForm });
+            const url = uploadResp?.data?.url ?? uploadResp?.url ?? uploadResp;
+            if (url) payload.profileImageUrl = url;
+          }
+        } catch (uploadErr: any) {
           console.error('Avatar upload failed', uploadErr);
-          toast({ title: 'Upload failed', description: 'Could not upload profile photo' });
+          toast({ title: 'Upload failed', description: uploadErr?.message || 'Could not upload profile photo' });
         }
       }
 

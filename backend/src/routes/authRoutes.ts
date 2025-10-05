@@ -40,7 +40,8 @@ async function upsertGoogleUser(profile: any) {
     const updates: any = {};
     if (profile.given_name && profile.given_name !== user.firstName) updates.firstName = profile.given_name;
     if (profile.family_name && profile.family_name !== user.lastName) updates.lastName = profile.family_name;
-    if (profile.picture && profile.picture !== user.profileImageUrl) updates.profileImageUrl = profile.picture;
+    // Only set Google picture if user has no avatar yet; do not overwrite a custom uploaded avatar
+    if (profile.picture && !user.profileImageUrl) updates.profileImageUrl = profile.picture;
     if (Object.keys(updates).length) {
       await User.findByIdAndUpdate(user._id, { $set: updates });
       user = await User.findById(user._id);
@@ -534,8 +535,16 @@ router.post('/login', loginValidation, async (req: Request, res: Response) => {
       userAgent
     });
 
-    // Remove password from response
-    const userResponse = user.toJSON();
+    // Prepare user response and normalize profileImageUrl to absolute URL if needed
+    const userResponse: any = user.toJSON();
+    try {
+      if (typeof userResponse.profileImageUrl === 'string' && userResponse.profileImageUrl.startsWith('/')) {
+        const forwardedProto = (req.headers['x-forwarded-proto'] as string) || req.protocol;
+        const forwardedHost = (req.headers['x-forwarded-host'] as string) || req.get('host');
+        const appBase = process.env.APP_BASE_URL || `${forwardedProto}://${forwardedHost}`;
+        userResponse.profileImageUrl = appBase + userResponse.profileImageUrl;
+      }
+    } catch {}
 
     // Also set session cookie + CSRF cookie for cookie-based auth
     try {

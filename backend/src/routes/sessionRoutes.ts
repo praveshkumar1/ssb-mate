@@ -223,7 +223,7 @@ router.post('/', authenticateToken, [
         const subjectToCoach = `New session booked by ${(ps?.menteeId as any)?.firstName || 'a user'}`;
         const subjectToMentee = `Session confirmed with ${(ps?.mentorId as any)?.firstName || 'your mentor'}`;
 
-        const sessionDetailsText = `Title: ${ps.title}\nWhen: ${new Date(ps.scheduledAt).toLocaleString()}\nDuration: ${ps.duration} minutes\nNotes: ${ps.description || ''}\nLink: ${ps.meetingLink || ''}`;
+  const sessionDetailsText = `Title: ${ps.title}\nWhen: ${new Date(ps.scheduledAt).toLocaleString()}\nDuration: ${ps.duration} minutes\nNotes: ${ps.description || ''}\nLink: ${ps.meetingLink || ''}`;
 
         // send asynchronously and don't block response
         import('../utils/mailer').then(mailer => {

@@ -5,38 +5,14 @@ import User from '../models/User';
 import Session from '../models/Session';
 import { authenticateToken } from '../middleware/authMiddleware';
 import multer from 'multer';
+import getSupabase from '../utils/supabase';
 import path from 'path';
-import fs from 'fs';
 
 const router = Router();
 
-// Configure multer storage for avatars
-// Resolve relative to this file's folder (src/routes or dist/routes) to always map to backend/uploads/avatars
-// In dev (ts-node): __dirname = backend/src/routes => ../../uploads/avatars => backend/uploads/avatars
-// In prod (compiled): __dirname = backend/dist/routes => ../../uploads/avatars => backend/uploads/avatars
-const avatarsDir = path.resolve(__dirname, '../../uploads/avatars');
-try {
-  if (!fs.existsSync(avatarsDir)) {
-    fs.mkdirSync(avatarsDir, { recursive: true });
-    logger.info(`Created avatars directory at ${avatarsDir}`);
-  }
-} catch (err) {
-  logger.error('Failed to create avatars directory', err);
-}
-
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, avatarsDir);
-  },
-  filename: function (req, file, cb) {
-    const ext = path.extname(file.originalname) || '.jpg';
-    const name = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`;
-    cb(null, name);
-  }
-});
-
+// Configure multer in-memory storage for avatars (we will upload to Supabase)
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 2 * 1024 * 1024 }, // 2 MB limit
   fileFilter: (req, file, cb) => {
     const allowed = /jpeg|jpg|png/;
@@ -52,28 +28,51 @@ const upload = multer({
 // POST /api/users/upload - upload avatar image (authenticated)
 router.post('/upload', authenticateToken, upload.single('avatar'), async (req: Request, res: Response) => {
   try {
-    const file = (req as any).file;
-    if (!file) {
+    const file = (req as any).file as Express.Multer.File;
+    if (!file || !file.buffer) {
       return res.status(400).json({ success: false, error: 'No file uploaded' });
     }
+  const supabase = getSupabase();
+  const bucket = process.env.SUPABASE_BUCKET || 'avatars';
+    const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
+    const safeName = `${Date.now()}-${Math.random().toString(36).slice(2,8)}${ext}`;
+  const userId = ((req as any).user?._id ?? (req as any).user?.userId ?? 'public').toString();
+  const objectPath = `profiles/${userId}/${safeName}`;
 
-    // Build public URL for the uploaded file
-    const forwardedProto = (req.headers['x-forwarded-proto'] as string) || req.protocol;
-    const forwardedHost = (req.headers['x-forwarded-host'] as string) || req.get('host');
-    const appBase = process.env.APP_BASE_URL || `${forwardedProto}://${forwardedHost}`;
-  const relativePath = path.posix.join('/uploads', 'avatars', file.filename);
-  const fileUrl = appBase + relativePath;
-  const absoluteFsPath = path.join(avatarsDir, file.filename);
-  const exists = fs.existsSync(absoluteFsPath);
-
-    apiLogger.info('Avatar uploaded', { endpoint: '/api/users/upload', file: file.filename, user: (req as any).user?.userId });
-
-    const payload: any = { url: fileUrl, filename: file.filename, path: relativePath };
-    if (process.env.NODE_ENV !== 'production') {
-      payload.exists = exists;
-      payload.fsPath = absoluteFsPath;
+    const { error: upErr } = await supabase.storage.from(bucket).upload(objectPath, file.buffer, {
+      contentType: file.mimetype || 'image/jpeg',
+      upsert: false,
+    });
+    if (upErr) {
+      logger.error('Supabase upload failed', upErr);
+      const dev = (process.env.NODE_ENV || 'development') !== 'production';
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to upload to storage',
+        ...(dev ? { details: { message: (upErr as any)?.message, name: (upErr as any)?.name, status: (upErr as any)?.status, code: (upErr as any)?.statusCode } } : {})
+      });
     }
-    return res.json({ success: true, data: payload, timestamp: new Date().toISOString() });
+
+    // Build public or signed URL depending on configuration
+    let fileUrl: string | undefined;
+    const useSigned = (process.env.SUPABASE_USE_SIGNED_URL || '').toLowerCase() === 'true';
+    if (useSigned) {
+      const ttl = parseInt(process.env.SUPABASE_SIGNED_URL_TTL || '') || 60 * 60 * 24 * 7; // 7 days default
+      const { data: signed, error: signErr } = await supabase.storage.from(bucket).createSignedUrl(objectPath, ttl);
+      if (signErr || !signed?.signedUrl) {
+        logger.warn('Falling back to public URL after signed URL failure', signErr);
+        const { data: pub } = supabase.storage.from(bucket).getPublicUrl(objectPath);
+        fileUrl = pub?.publicUrl;
+      } else {
+        fileUrl = signed.signedUrl;
+      }
+    } else {
+      const { data: pub } = supabase.storage.from(bucket).getPublicUrl(objectPath);
+      fileUrl = pub?.publicUrl;
+    }
+    apiLogger.info('Avatar uploaded to Supabase', { endpoint: '/api/users/upload', objectPath, user: (req as any).user?.userId });
+
+    return res.json({ success: true, data: { url: fileUrl, path: objectPath }, timestamp: new Date().toISOString() });
   } catch (error) {
     logger.error('Error uploading avatar:', error);
     return res.status(500).json({ success: false, error: 'Failed to upload file' });
@@ -113,6 +112,15 @@ router.get('/profile', authenticateToken, async (req: Request, res: Response) =>
 
     // Normalize availability: convert legacy "start|end" and single ISO strings to structured objects for the frontend
     const doc: any = found?.toObject ? found.toObject() : found;
+    // Ensure profileImageUrl is absolute (older records may have '/uploads/...')
+    try {
+      if (doc && typeof doc.profileImageUrl === 'string' && doc.profileImageUrl.startsWith('/')) {
+        const forwardedProto = (req.headers['x-forwarded-proto'] as string) || req.protocol;
+        const forwardedHost = (req.headers['x-forwarded-host'] as string) || req.get('host');
+        const appBase = process.env.APP_BASE_URL || `${forwardedProto}://${forwardedHost}`;
+        doc.profileImageUrl = appBase + doc.profileImageUrl;
+      }
+    } catch {}
     if (doc && Array.isArray(doc.availability)) {
       doc.availability = doc.availability.map((a: any) => {
         if (!a) return a;
@@ -196,6 +204,14 @@ router.put('/profile', authenticateToken, async (req: Request, res: Response) =>
         if (s) return { start: new Date(s).toISOString() };
         return a;
       });
+    }
+
+    // Normalize profileImageUrl to absolute URL if client sent a relative path
+    if (typeof updates.profileImageUrl === 'string' && updates.profileImageUrl.startsWith('/')) {
+      const forwardedProto = (req.headers['x-forwarded-proto'] as string) || req.protocol;
+      const forwardedHost = (req.headers['x-forwarded-host'] as string) || req.get('host');
+      const appBase = process.env.APP_BASE_URL || `${forwardedProto}://${forwardedHost}`;
+      updates.profileImageUrl = appBase + updates.profileImageUrl;
     }
 
     // Update the user document

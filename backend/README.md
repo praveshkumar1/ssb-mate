@@ -136,6 +136,12 @@ The server will start on `http://localhost:8080`
 | `JWT_EXPIRES_IN` | JWT expiration time | 24h |
 | `CORS_ORIGIN` | Allowed CORS origin | http://localhost:5173 |
 | `LOG_LEVEL` | Logging level | info |
+| `SUPABASE_URL` | Supabase project URL | - |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (server-side) | - |
+| `SUPABASE_ANON_KEY` | Supabase anon key (fallback if service role not provided) | - |
+| `SUPABASE_BUCKET` | Supabase Storage bucket name for uploads | avatars |
+| `SUPABASE_USE_SIGNED_URL` | If true, use time-limited signed URLs for images | false |
+| `SUPABASE_SIGNED_URL_TTL` | Signed URL TTL in seconds | 604800 (7 days) |
 
 ## Project Structure
 

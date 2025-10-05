@@ -1,14 +1,18 @@
 import dotenv from 'dotenv';
-dotenv.config({ path: 'd:/Downloads/ssb_connect/backend/.env' });
+// Load environment variables from backend/.env when running from backend folder
+dotenv.config();
 
 import mailer from '../src/utils/mailer';
 import { logger } from '../src/utils/logger';
 
 (async () => {
   try {
-    const to = 'praveshunofficial@gmail.com';
-    const subject = 'Test email from SSB Connect (Mailgun sandbox)';
-    const text = 'This is a test email sent from the SSB Connect backend using your Mailgun sandbox SMTP settings.';
+    // Allow overrides via CLI args or env
+    // Usage: ts-node scripts/send_mail.ts recipient@example.com "Subject here" "Body text"
+    const [, , argTo, argSubject, argText] = process.argv;
+    const to = argTo || process.env.TEST_MAIL_TO || 'praveshunofficial@gmail.com';
+    const subject = argSubject || process.env.TEST_MAIL_SUBJECT || 'Test email from SSB Connect (Resend)';
+    const text = argText || process.env.TEST_MAIL_TEXT || 'This is a test email sent from the SSB Connect backend using Resend.';
     const html = `<p>${text}</p>`;
 
     logger.info('Attempting to send test email', { to, subject });
