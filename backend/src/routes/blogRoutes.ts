@@ -38,7 +38,7 @@ router.get('/:id', async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/blog - create a post (mentor or admin)
+// POST /api/blog - create a post (mentee, mentor, or admin)
 router.post('/', authenticateToken, [
   body('title').trim().isLength({ min: 3 }).withMessage('Title must be at least 3 characters'),
   body('content').trim().isLength({ min: 20 }).withMessage('Content must be at least 20 characters'),
@@ -54,8 +54,8 @@ router.post('/', authenticateToken, [
     if (!errors.isEmpty()) return res.status(400).json({ success: false, errors: errors.array() });
 
     const user = (req as any).user;
-    if (!user) return res.status(401).json({ success: false, message: 'Unauthorized' });
-    if (!['mentor', 'admin'].includes(user.role)) return res.status(403).json({ success: false, message: 'Only mentors or admins can create blog posts' });
+  if (!user) return res.status(401).json({ success: false, message: 'Unauthorized' });
+  if (!['mentee', 'mentor', 'admin'].includes(user.role)) return res.status(403).json({ success: false, message: 'Only authenticated users can create blog posts' });
 
     // Normalize body fields
     const title = String(req.body.title || '').trim();

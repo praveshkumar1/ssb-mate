@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { apiClient } from '@/services/api';
 import { toast } from '@/components/ui/use-toast';
+import supabase from '@/services/supabase';
 
 type Props = {
   open: boolean;
@@ -87,12 +88,35 @@ const QuickEditProfileModal: React.FC<Props> = ({ open, onClose, profile, onSave
           const preview = URL.createObjectURL(resizedBlob);
           setPreviewUrl(preview);
 
-          const form = new FormData();
-          const uploadFile = new File([resizedBlob], selectedFile.name.replace(/\s+/g, '_'), { type: 'image/jpeg' });
-          form.append('avatar', uploadFile);
-          const uploadResp: any = await apiClient.request('/users/upload', { method: 'POST', body: form });
-          const url = uploadResp?.data?.url ?? uploadResp?.url ?? uploadResp;
-          if (url) payload.profileImageUrl = url;
+          // Prefer direct Supabase upload if configured, using deterministic path and upsert
+          if (supabase && import.meta.env.VITE_SUPABASE_BUCKET) {
+            const bucket = import.meta.env.VITE_SUPABASE_BUCKET as string;
+            const rawUser = JSON.parse(localStorage.getItem('user') || '{}');
+            const userId = (rawUser?._id || rawUser?.id || rawUser?.userId || 'public').toString();
+            const folder = `profiles/${userId}`;
+            const objectPath = `${folder}/avatar.jpg`;
+            const { error: upErr } = await supabase.storage.from(bucket).upload(objectPath, resizedBlob, {
+              contentType: 'image/jpeg',
+              upsert: true,
+            });
+            if (upErr) throw upErr;
+            try {
+              const { data: listed } = await supabase.storage.from(bucket).list(folder, { limit: 100 });
+              const toDelete = (listed || []).filter(f => f.name !== 'avatar.jpg').map(f => `${folder}/${f.name}`);
+              if (toDelete.length) await supabase.storage.from(bucket).remove(toDelete);
+            } catch {}
+            const { data: pub } = supabase.storage.from(bucket).getPublicUrl(objectPath);
+            const url = pub?.publicUrl ? `${pub.publicUrl}?v=${Date.now()}` : undefined;
+            if (url) payload.profileImageUrl = url;
+          } else {
+            // Fallback to backend upload endpoint
+            const form = new FormData();
+            const uploadFile = new File([resizedBlob], 'avatar.jpg', { type: 'image/jpeg' });
+            form.append('avatar', uploadFile);
+            const uploadResp: any = await apiClient.request('/users/upload', { method: 'POST', body: form });
+            const url = uploadResp?.data?.url ?? uploadResp?.url ?? uploadResp;
+            if (url) payload.profileImageUrl = url;
+          }
         } catch (uploadErr) {
           console.error('Upload failed', uploadErr);
           toast({ title: 'Upload failed', description: 'Could not upload profile image' });

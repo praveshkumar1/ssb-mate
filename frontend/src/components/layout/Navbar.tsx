@@ -55,6 +55,9 @@ const Navbar = () => {
               <Link to="/coaches" className="text-foreground hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-colors" aria-label="Find Coaches">
                 Find Coaches
               </Link>
+              <Link to="/discussions" className="text-foreground hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                Live Discussions
+              </Link>
               <Link to="/#how-it-works" className="text-foreground hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-colors">
                 How it Works
               </Link>
@@ -120,6 +123,9 @@ const Navbar = () => {
             <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 border-t">
               <Link to="/coaches" className="text-foreground hover:text-primary block px-3 py-2 rounded-md text-base font-medium">
                 Find Coaches
+              </Link>
+              <Link to="/discussions" className="text-foreground hover:text-primary block px-3 py-2 rounded-md text-base font-medium" onClick={() => setIsMenuOpen(false)}>
+                Live Discussions
               </Link>
               <Link to="/#how-it-works" className="text-foreground hover:text-primary block px-3 py-2 rounded-md text-base font-medium" onClick={() => setIsMenuOpen(false)}>
                 How it Works

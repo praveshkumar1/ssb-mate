@@ -114,23 +114,35 @@ const UserProfileEdit = () => {
       if (selectedFile) {
         try {
           const resizedBlob = await resizeImage(selectedFile, 1024, 0.8);
-          const fileName = selectedFile.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
-          const ext = fileName.includes('.') ? fileName.split('.').pop() : 'jpg';
-          const safeName = `${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
+          // Use deterministic path so each user has exactly one avatar in Supabase
+          const fileName = 'avatar.jpg';
 
           // If frontend Supabase is configured, upload directly using anon key
           if (supabase && import.meta.env.VITE_SUPABASE_BUCKET) {
             const bucket = import.meta.env.VITE_SUPABASE_BUCKET as string;
             const userId = (storedUser?._id || storedUser?.id || 'public').toString();
-            const objectPath = `profiles/${userId}/${safeName}`;
+            const folder = `profiles/${userId}`;
+            const objectPath = `${folder}/${fileName}`;
             try {
               const { error: upErr } = await supabase.storage.from(bucket).upload(objectPath, resizedBlob, {
                 contentType: 'image/jpeg',
-                upsert: false
+                upsert: true // overwrite existing to keep only one image per user
               });
               if (upErr) throw upErr;
+              // Best-effort cleanup of any older stray files in the user's folder
+              try {
+                const { data: listed } = await supabase.storage.from(bucket).list(folder, { limit: 100 });
+                const toDelete = (listed || [])
+                  .filter(f => f.name !== fileName)
+                  .map(f => `${folder}/${f.name}`);
+                if (toDelete.length) {
+                  await supabase.storage.from(bucket).remove(toDelete);
+                }
+              } catch {}
+
               const { data: pub } = supabase.storage.from(bucket).getPublicUrl(objectPath);
-              const url = pub?.publicUrl;
+              // Add a cache-busting param so the updated image shows immediately
+              const url = pub?.publicUrl ? `${pub.publicUrl}?v=${Date.now()}` : undefined;
               if (url) payload.profileImageUrl = url;
             } catch (err) {
               const fallback = (import.meta.env.VITE_UPLOAD_BACKEND_FALLBACK as string) === 'true';

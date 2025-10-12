@@ -20,6 +20,7 @@ import authRoutes from './routes/authRoutes';
 import sessionRoutes from './routes/sessionRoutes';
 import resourceRoutes from './routes/resourceRoutes';
 import blogRoutes from './routes/blogRoutes';
+import discussionRoutes from './routes/discussionRoutes';
 
 // Load environment variables
 dotenv.config();
@@ -169,6 +170,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/sessions', sessionRoutes);
 app.use('/api/resources', resourceRoutes);
 app.use('/api/blog', blogRoutes);
+app.use('/api/discussions', discussionRoutes);
 
 // CSRF protection for state-changing requests (reads cookie header and validates header token)
 app.use(csrfProtection);

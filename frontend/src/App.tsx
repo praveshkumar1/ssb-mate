@@ -27,6 +27,9 @@ import ChooseRole from './pages/ChooseRole';
 import BlogList from './pages/BlogList';
 import BlogDetail from './pages/BlogDetail';
 import BlogEditor from './pages/BlogEditor';
+import Discussions from './pages/Discussions';
+import AdminCreateDiscussion from './pages/AdminCreateDiscussion';
+import React from 'react';
 
 const queryClient = new QueryClient();
 
@@ -50,7 +53,9 @@ const App = () => (
           <Route path="/blog/:id" element={<BlogDetail />} />
           <Route path="/dashboard/blog/new" element={<ProtectedRoute><BlogEditor /></ProtectedRoute>} />
           <Route path="/sessions" element={<SessionsList />} />
+          <Route path="/discussions" element={<Discussions />} />
           <Route path="/profile/edit" element={<ProtectedRoute><UserProfileEdit /></ProtectedRoute>} />
+          <Route path="/admin/discussions/new" element={<ProtectedRoute><AdminCreateDiscussion /></ProtectedRoute>} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/dashboard/sessions" element={<ProtectedRoute><DashboardSessions /></ProtectedRoute>} />
           <Route path="/dashboard/manage-sessions" element={<ProtectedRoute><ManageSessions /></ProtectedRoute>} />
