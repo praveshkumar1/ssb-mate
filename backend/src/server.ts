@@ -28,6 +28,17 @@ dotenv.config();
 const app = express();
 const PORT = parseInt(process.env.PORT || '8080');
 
+// When deployed behind a reverse proxy (Render/Heroku/Nginx), Express must trust the proxy
+// so req.ip and express-rate-limit can safely use X-Forwarded-For.
+// Configure via TRUST_PROXY=1 (recommended) or default to enabling in production.
+const trustProxyEnv = (process.env.TRUST_PROXY || '').toLowerCase();
+if (trustProxyEnv === 'true' || trustProxyEnv === '1') {
+  app.set('trust proxy', 1);
+} else if (process.env.NODE_ENV === 'production') {
+  // safe default for typical single-proxy deployments
+  app.set('trust proxy', 1);
+}
+
 // Rate limiting
 const limiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'), // 15 minutes

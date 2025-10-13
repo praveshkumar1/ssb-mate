@@ -30,6 +30,9 @@ import BlogEditor from './pages/BlogEditor';
 import Discussions from './pages/Discussions';
 import AdminCreateDiscussion from './pages/AdminCreateDiscussion';
 import React from 'react';
+import VerifyEmail from './pages/VerifyEmail';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 
 const queryClient = new QueryClient();
 
@@ -44,6 +47,9 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/coaches" element={<CoachesList />} />
           <Route path="/coaches/:id" element={<CoachProfile />} />
           <Route path="/resources" element={<ResourcesList />} />

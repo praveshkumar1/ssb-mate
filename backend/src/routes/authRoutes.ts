@@ -11,6 +11,7 @@ import { encryptText, decryptText } from '../utils/crypto';
 import { CSRF_COOKIE_NAME, CSRF_HEADER_NAME } from '../middleware/csrf';
 import crypto from 'crypto';
 import { authenticateToken } from '../middleware/authMiddleware';
+import { sendMail } from '../utils/mailer';
 
 const router = Router();
 
@@ -300,7 +301,30 @@ const loginValidation = [
     .withMessage('Password is required')
 ];
 
-// POST /api/auth/register - Register a new user
+// Helper to issue app session cookie and CSRF cookie, and standardize response
+function issueSessionAndRespond(res: Response, user: any, message = 'Login successful') {
+  const token = jwt.sign(
+    { userId: user._id, email: user.email, role: user.role },
+    process.env.JWT_SECRET || 'fallback-secret',
+    { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
+  );
+  try {
+    const cookieName = process.env.SESSION_COOKIE_NAME || 'ssb_token';
+    const cookieOptions: any = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      maxAge: (process.env.JWT_EXPIRES_SECONDS ? parseInt(process.env.JWT_EXPIRES_SECONDS) : 24 * 60 * 60) * 1000
+    };
+    res.cookie(cookieName, token, cookieOptions);
+    const csrfToken = crypto.randomBytes(32).toString('hex');
+    res.cookie(CSRF_COOKIE_NAME, encodeURIComponent(csrfToken), { httpOnly: false, secure: process.env.NODE_ENV === 'production', sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', maxAge: cookieOptions.maxAge });
+  } catch {}
+  const userResponse = user.toJSON();
+  return res.json({ success: true, message, data: { user: userResponse, token, tokenType: 'Bearer' } });
+}
+
+// POST /api/auth/register - Register a new user, send email OTP for verification
 router.post('/register', registerValidation, async (req: Request, res: Response) => {
   try {
     // Check for validation errors
@@ -377,21 +401,25 @@ router.post('/register', registerValidation, async (req: Request, res: Response)
       hourlyRate: typeof hourlyRate === 'number' && !Number.isNaN(hourlyRate) ? hourlyRate : undefined,
       specializations: specializations,
       isActive: true,
-      isVerified: role === 'mentee' // Auto-verify mentees, mentors need manual verification
+      isVerified: false,
+      emailVerified: false
     });
 
     await newUser.save();
 
-    // Generate JWT token
-    const token = jwt.sign(
-      { 
-        userId: newUser._id, 
-        email: newUser.email, 
-        role: newUser.role 
-      },
-      process.env.JWT_SECRET || 'fallback-secret',
-      { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
-    );
+    // Generate verification code and email it
+    try {
+      const code = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit
+      const expires = new Date(Date.now() + 15 * 60 * 1000);
+      await User.findByIdAndUpdate(newUser._id, { $set: { emailVerificationCode: code, emailVerificationExpires: expires } });
+      await sendMail({
+        to: email,
+        subject: 'Verify your email - SSB Mate',
+        text: `Your verification code is ${code}. It expires in 15 minutes.`
+      });
+    } catch (e) {
+      logger.warn('Failed to send verification email', e);
+    }
 
     authLogger.register(email, role, clientIP);
     logger.info(`New user registered: ${email} as ${role}`, {
@@ -402,39 +430,7 @@ router.post('/register', registerValidation, async (req: Request, res: Response)
       userAgent: req.get('User-Agent')
     });
 
-    // Remove password from response
-    const userResponse = newUser.toJSON();
-
-    // Also set session cookie + CSRF cookie for cookie-based auth
-    try {
-      const cookieName = process.env.SESSION_COOKIE_NAME || 'ssb_token';
-      const cookieOptions: any = {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-        maxAge: (process.env.JWT_EXPIRES_SECONDS ? parseInt(process.env.JWT_EXPIRES_SECONDS) : 24 * 60 * 60) * 1000
-      };
-      res.cookie(cookieName, token, cookieOptions);
-      // set CSRF cookie (non-HttpOnly) so client JS can read and send header
-      try {
-        const csrfToken = crypto.randomBytes(32).toString('hex');
-  res.cookie(CSRF_COOKIE_NAME, encodeURIComponent(csrfToken), { httpOnly: false, secure: process.env.NODE_ENV === 'production', sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', maxAge: cookieOptions.maxAge });
-      } catch (e) {
-        logger.warn('Failed to set CSRF cookie on register', e);
-      }
-    } catch (e) {
-      logger.warn('Failed to set session cookie on register', e);
-    }
-
-    return res.status(201).json({
-      success: true,
-      message: 'User registered successfully',
-      data: {
-        user: userResponse,
-        token,
-        tokenType: 'Bearer'
-      }
-    });
+    return res.status(201).json({ success: true, message: 'User registered. Please verify your email with the code sent.', data: { user: newUser.toJSON() } });
 
   } catch (error) {
     logger.error('Registration error:', error);
@@ -446,6 +442,7 @@ router.post('/register', registerValidation, async (req: Request, res: Response)
 });
 
 // POST /api/auth/login - Login user
+// POST /api/auth/login - Login user (email+password only; Google is separate callback)
 router.post('/login', loginValidation, async (req: Request, res: Response) => {
   try {
     // Check for validation errors
@@ -514,16 +511,18 @@ router.post('/login', loginValidation, async (req: Request, res: Response) => {
       });
     }
 
-    // Generate JWT token
-    const token = jwt.sign(
-      { 
-        userId: user._id, 
-        email: user.email, 
-        role: user.role 
-      },
-      process.env.JWT_SECRET || 'fallback-secret',
-      { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
-    );
+    // If email not verified, reject and optionally resend code
+    if (!user.emailVerified) {
+      try {
+        if (!user.emailVerificationCode || !user.emailVerificationExpires || user.emailVerificationExpires < new Date()) {
+          const code = Math.floor(100000 + Math.random() * 900000).toString();
+          const expires = new Date(Date.now() + 15 * 60 * 1000);
+          await User.findByIdAndUpdate(user._id, { $set: { emailVerificationCode: code, emailVerificationExpires: expires } });
+          await sendMail({ to: user.email, subject: 'Verify your email - SSB Mate', text: `Your verification code is ${code}. It expires in 15 minutes.` });
+        }
+      } catch {}
+      return res.status(403).json({ success: false, message: 'Email not verified. Please verify to continue.', needVerification: true });
+    }
 
     // Log successful login
     authLogger.login(email, true, clientIP, userAgent);
@@ -546,35 +545,7 @@ router.post('/login', loginValidation, async (req: Request, res: Response) => {
       }
     } catch {}
 
-    // Also set session cookie + CSRF cookie for cookie-based auth
-    try {
-      const cookieName = process.env.SESSION_COOKIE_NAME || 'ssb_token';
-      const cookieOptions: any = {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-        maxAge: (process.env.JWT_EXPIRES_SECONDS ? parseInt(process.env.JWT_EXPIRES_SECONDS) : 24 * 60 * 60) * 1000
-      };
-      res.cookie(cookieName, token, cookieOptions);
-      try {
-        const csrfToken = crypto.randomBytes(32).toString('hex');
-  res.cookie(CSRF_COOKIE_NAME, encodeURIComponent(csrfToken), { httpOnly: false, secure: process.env.NODE_ENV === 'production', sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', maxAge: cookieOptions.maxAge });
-      } catch (e) {
-        logger.warn('Failed to set CSRF cookie on login', e);
-      }
-    } catch (e) {
-      logger.warn('Failed to set session cookie on login', e);
-    }
-
-    return res.json({
-      success: true,
-      message: 'Login successful',
-      data: {
-        user: userResponse,
-        token,
-        tokenType: 'Bearer'
-      }
-    });
+    return issueSessionAndRespond(res, user, 'Login successful');
 
   } catch (error) {
     logger.error('Login error:', error);
@@ -585,7 +556,41 @@ router.post('/login', loginValidation, async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/auth/forgot-password - Request password reset
+// POST /api/auth/verify-email - Verify email using OTP code
+router.post('/verify-email', [
+  body('email').isEmail().normalizeEmail(),
+  body('code').isLength({ min: 4, max: 8 })
+], async (req: Request, res: Response) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ success: false, errors: errors.array() });
+  const { email, code } = req.body;
+  const user = await User.findOne({ email });
+  if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+  if (!user.emailVerificationCode || !user.emailVerificationExpires) return res.status(400).json({ success: false, message: 'No verification pending' });
+  if (user.emailVerificationExpires < new Date()) return res.status(400).json({ success: false, message: 'Verification code expired' });
+  if (String(user.emailVerificationCode) !== String(code)) return res.status(400).json({ success: false, message: 'Invalid code' });
+  user.emailVerified = true;
+  user.isVerified = user.isVerified || user.role === 'mentee'; // maintain existing policy
+  user.emailVerificationCode = undefined as any;
+  user.emailVerificationExpires = undefined as any;
+  await user.save();
+  // Issue session now so onboarding continues the same path as Google
+  return issueSessionAndRespond(res, user, 'Email verified and signed in');
+});
+
+// POST /api/auth/resend-code - resend verification code
+router.post('/resend-code', [ body('email').isEmail().normalizeEmail() ], async (req: Request, res: Response) => {
+  const { email } = req.body;
+  const user = await User.findOne({ email });
+  if (!user) return res.json({ success: true, message: 'If the email exists, a code has been sent.' });
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const expires = new Date(Date.now() + 15 * 60 * 1000);
+  await User.findByIdAndUpdate(user._id, { $set: { emailVerificationCode: code, emailVerificationExpires: expires } });
+  await sendMail({ to: email, subject: 'Verify your email - SSB Mate', text: `Your verification code is ${code}. It expires in 15 minutes.` });
+  return res.json({ success: true, message: 'Verification code sent.' });
+});
+
+// POST /api/auth/forgot-password - Request password reset (email OTP)
 router.post('/forgot-password', [
   body('email').isEmail().normalizeEmail().withMessage('Please provide a valid email')
 ], async (req: Request, res: Response) => {
@@ -622,6 +627,12 @@ router.post('/forgot-password', [
       });
     }
 
+    // Create OTP reset code and email it
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expires = new Date(Date.now() + 15 * 60 * 1000);
+    await User.findByIdAndUpdate(user._id, { $set: { passwordResetCode: code, passwordResetExpires: expires } });
+    await sendMail({ to: email, subject: 'Reset your password - SSB Mate', text: `Your password reset code is ${code}. It expires in 15 minutes.` });
+
     // Log password reset request
     authLogger.passwordReset(email, clientIP);
     logger.info(`Password reset requested for: ${email}`, {
@@ -631,10 +642,7 @@ router.post('/forgot-password', [
       userAgent
     });
 
-    return res.json({
-      success: true,
-      message: 'If an account with that email exists, a password reset link will be sent.'
-    });
+    return res.json({ success: true, message: 'If an account with that email exists, a reset code has been sent.' });
 
   } catch (error) {
     logger.error('Forgot password error:', error);
@@ -643,6 +651,28 @@ router.post('/forgot-password', [
       message: 'Internal server error'
     });
   }
+});
+
+// POST /api/auth/reset-password - complete password reset with OTP
+router.post('/reset-password', [
+  body('email').isEmail().normalizeEmail(),
+  body('code').isLength({ min: 4, max: 8 }),
+  body('newPassword').isLength({ min: 6 })
+], async (req: Request, res: Response) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ success: false, errors: errors.array() });
+  const { email, code, newPassword } = req.body;
+  const user = await User.findOne({ email });
+  if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+  if (!user.passwordResetCode || !user.passwordResetExpires) return res.status(400).json({ success: false, message: 'No reset in progress' });
+  if (user.passwordResetExpires < new Date()) return res.status(400).json({ success: false, message: 'Reset code expired' });
+  if (String(user.passwordResetCode) !== String(code)) return res.status(400).json({ success: false, message: 'Invalid code' });
+  const hashed = await bcrypt.hash(String(newPassword), 12);
+  user.password = hashed;
+  user.passwordResetCode = undefined as any;
+  user.passwordResetExpires = undefined as any;
+  await user.save();
+  return res.json({ success: true, message: 'Password has been reset. You can now sign in.' });
 });
 
 export default router;

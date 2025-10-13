@@ -62,9 +62,11 @@ const Login = () => {
       // Prefer dashboard route if exists, otherwise profile
       navigate('/dashboard', { replace: true });
     } catch (err: any) {
+      const need = err?.data?.needVerification || err?.response?.data?.needVerification;
       const msg = err?.response?.data?.message ?? err?.message ?? 'Login failed. Check credentials and try again.';
       setError(msg);
       toast({ title: 'Sign in failed', description: msg });
+      if (need) navigate('/verify-email');
     } finally {
       setLoading(false);
     }

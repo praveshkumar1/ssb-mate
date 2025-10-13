@@ -35,6 +35,11 @@ export interface IUser extends Document {
   profileImageUrl?: string;
   googleId?: string;
   googleRefreshToken?: string;
+  emailVerified?: boolean;
+  emailVerificationCode?: string;
+  emailVerificationExpires?: Date;
+  passwordResetCode?: string;
+  passwordResetExpires?: Date;
   certifications: string[];
   sportsPlayed: string[];
   createdAt: Date;
@@ -145,6 +150,24 @@ const UserSchema: Schema = new Schema({
   googleRefreshToken: {
     type: String,
     trim: true
+  },
+  emailVerified: {
+    type: Boolean,
+    default: false
+  },
+  emailVerificationCode: {
+    type: String,
+    trim: true
+  },
+  emailVerificationExpires: {
+    type: Date
+  },
+  passwordResetCode: {
+    type: String,
+    trim: true
+  },
+  passwordResetExpires: {
+    type: Date
   },
   certifications: [{
     type: String,
