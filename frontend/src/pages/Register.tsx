@@ -6,7 +6,6 @@ import { toast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import GoogleSignInButton from '@/components/GoogleSignInButton';
 import Spinner from '@/components/ui/Spinner';
 
@@ -37,29 +36,12 @@ const Register = () => {
     setLoading(true);
     setError(null);
     try {
-  const resp = await authService.register(form as any);
-  const respAny: any = resp;
-  const data: any = respAny?.data ?? respAny;
-      const token = data?.token ?? data?.data?.token ?? null;
-      const user = data?.user ?? data?.data?.user ?? null;
-
-      if (!token) throw new Error('Registration failed (no token)');
-
-  // update auth context (AuthProvider will persist to localStorage)
-      // store token & user and update context
-      auth.login(token, user);
-
-      // wait briefly for localStorage and AuthContext to settle so the protected onboarding route is accessible
-      // show a small wait animation during this time
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      if (user?.role === 'mentor') {
-        toast({ title: 'Welcome, mentor', description: 'Let\'s finish your mentor profile' });
-        navigate('/onboard/mentor', { replace: true });
-      } else {
-        toast({ title: 'Registered', description: 'Account created, redirecting to dashboard' });
-        navigate('/dashboard', { replace: true });
-      }
+      const resp = await authService.register(form as any);
+      const respAny: any = resp;
+      const data: any = respAny?.data ?? respAny;
+      // New flow: backend sends verification email; no token yet
+      toast({ title: 'Almost there', description: 'We sent a verification code to your email.' });
+      navigate(`/verify-email?email=${encodeURIComponent(form.email)}`, { replace: true });
     } catch (err: any) {
       const msg = err?.response?.data?.message ?? err?.message ?? 'Registration failed';
       setError(msg);
@@ -85,19 +67,13 @@ const Register = () => {
             <div className="flex flex-col items-center gap-3">
               <GoogleSignInButton className="w-full" label="Sign up with Google" />
               <p className="text-xs text-muted-foreground text-center">
-                We currently support new registrations via Google only. You’ll set your role and complete onboarding after signing in.
+                Google is recommended for the best experience. You’ll set your role and complete onboarding after signing in.
               </p>
             </div>
           </TabsContent>
 
           <TabsContent value="email" className="mt-6">
-            <Alert>
-              <AlertDescription>
-                Email sign-up is temporarily disabled. Please use "Sign up with Google". If you already created an email account earlier, you can sign in from the Login page.
-              </AlertDescription>
-            </Alert>
-
-            <form onSubmit={submit} className="space-y-4 mt-4 opacity-60 pointer-events-none" aria-disabled>
+            <form onSubmit={submit} className="space-y-4 mt-4">
               <div className="grid grid-cols-2 gap-3">
                 <Input placeholder="First name" value={form.firstName} onChange={e => handleChange('firstName', e.target.value)} />
                 <Input placeholder="Last name" value={form.lastName} onChange={e => handleChange('lastName', e.target.value)} />
@@ -116,8 +92,8 @@ const Register = () => {
               {error && <div role="alert" className="text-sm text-destructive">{error}</div>}
 
               <div>
-                <Button type="submit" className="w-full" size="lg" disabled>
-                  <Spinner className="w-4 h-4"/> Create account
+                <Button type="submit" className="w-full" size="lg" disabled={loading}>
+                  {loading ? (<><Spinner className="w-4 h-4"/> Creating...</>) : 'Create account'}
                 </Button>
               </div>
             </form>
