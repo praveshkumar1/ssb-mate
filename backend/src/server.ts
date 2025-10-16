@@ -8,6 +8,7 @@ import { logger } from './utils/logger';
 import { errorHandler } from './middleware/errorHandler';
 import { notFoundHandler } from './middleware/notFoundHandler';
 import { requestLogger, errorLogger } from './middleware/requestLogger';
+import { requestId } from './middleware/requestId';
 import { connectDatabase } from './database/connection';
 import { seedDatabase } from './database/seed';
 import { csrfProtection } from './middleware/csrf';
@@ -55,6 +56,7 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' }
 }));
 app.use(compression());
+app.use(requestId);
 app.use(limiter);
 
 // CORS configuration (single origin only via env)

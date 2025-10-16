@@ -13,7 +13,9 @@ export const requestLogger = (req: TimedRequest, res: Response, next: NextFuncti
   // Get client information
   const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress || 'unknown';
   const userAgent = req.get('User-Agent') || 'unknown';
-  const userId = (req as any).user?.userId || undefined; // From auth middleware if available
+  const userId = (req as any).user?._id || (req as any).user?.userId || undefined; // From auth middleware if available
+  const email = (req as any).user?.email || undefined;
+  const requestId = (req as any).requestId || undefined;
   
   // Override res.end to capture response details
   const originalEnd = res.end.bind(res);
@@ -29,6 +31,8 @@ export const requestLogger = (req: TimedRequest, res: Response, next: NextFuncti
       clientIP,
       userId
     );
+    // add granular log with meta for important tracing
+    apiLogger.info('API completed', { requestId, method: req.method, url: req.originalUrl, statusCode: res.statusCode, responseTime, ip: clientIP, userId, email });
     
     // Call original end method
     return originalEnd(chunk, encoding, cb);
@@ -40,7 +44,9 @@ export const requestLogger = (req: TimedRequest, res: Response, next: NextFuncti
 // Middleware to log errors
 export const errorLogger = (error: Error, req: Request, res: Response, next: NextFunction) => {
   const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress || 'unknown';
-  const userId = (req as any).user?.userId || undefined;
+  const userId = (req as any).user?._id || (req as any).user?.userId || undefined;
+  const email = (req as any).user?.email || undefined;
+  const requestId = (req as any).requestId || undefined;
   
   apiLogger.error(
     req.method,
@@ -49,6 +55,7 @@ export const errorLogger = (error: Error, req: Request, res: Response, next: Nex
     clientIP,
     userId
   );
+  apiLogger.error('API error details', { requestId, email });
   
   next(error);
 };

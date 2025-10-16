@@ -33,25 +33,27 @@ const HeroSection = () => {
             practice sessions, and proven strategies to crack your SSB interview.
           </p>
           
-          {/* Stats */}
-          <div className="flex flex-wrap justify-center gap-8 mb-10 animate-slide-up" role="list" aria-label="Key stats">
-            <div className="flex items-center gap-2">
-              <div className="flex" role="listitem" aria-hidden>
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="h-5 w-5 fill-yellow-400 text-yellow-400" />
-                ))}
+          {/* Stats temporarily hidden */}
+          {false && (
+            <div className="flex flex-wrap justify-center gap-8 mb-10 animate-slide-up" role="list" aria-label="Key stats">
+              <div className="flex items-center gap-2">
+                <div className="flex" role="listitem" aria-hidden>
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+                  ))}
+                </div>
+                <span className="text-sm text-muted-foreground">4.9/5 Rating</span>
               </div>
-              <span className="text-sm text-muted-foreground">4.9/5 Rating</span>
+              <div className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-primary" />
+                <span className="text-sm text-muted-foreground">500+ Expert Coaches</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-5 w-5 text-success" />
+                <span className="text-sm text-muted-foreground">85% Success Rate</span>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-primary" />
-              <span className="text-sm text-muted-foreground">500+ Expert Coaches</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-success" />
-              <span className="text-sm text-muted-foreground">85% Success Rate</span>
-            </div>
-          </div>
+          )}
           
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center animate-slide-up">

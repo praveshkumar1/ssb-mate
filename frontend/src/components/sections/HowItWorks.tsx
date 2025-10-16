@@ -9,7 +9,8 @@ const HowItWorks = () => {
       icon: Search,
       title: "Find Your Coach",
       description: "Browse through our verified SSB experts. Filter by specialization, experience, ratings, and price to find your perfect match.",
-      features: ["500+ Expert Coaches", "Detailed Profiles", "Real Reviews"]
+  // features hidden
+  features: ["Detailed Profiles", "Real Reviews"]
     },
     {
       step: "02", 
@@ -30,7 +31,8 @@ const HowItWorks = () => {
       icon: Trophy,
       title: "Ace Your SSB",
       description: "Apply what you've learned and crack your SSB interview with confidence. Join thousands of successful candidates.",
-      features: ["85% Success Rate", "Ongoing Support", "Success Stories"]
+  // features hidden
+  features: ["Ongoing Support", "Success Stories"]
     }
   ];
 
@@ -102,48 +104,50 @@ const HowItWorks = () => {
           })}
         </div>
 
-        {/* Success Stats */}
-        <div className="mt-20 text-center">
-          <div className="bg-card rounded-2xl p-8 shadow-card max-w-4xl mx-auto">
-            <h3 className="text-2xl font-bold text-foreground mb-8">
-              Trusted Results That Speak for Themselves
-            </h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-              <div>
-                <div className="text-3xl font-bold gradient-primary bg-clip-text text-transparent mb-2">
-                  5000+
+        {/* Success Stats temporarily hidden */}
+        {false && (
+          <div className="mt-20 text-center">
+            <div className="bg-card rounded-2xl p-8 shadow-card max-w-4xl mx-auto">
+              <h3 className="text-2xl font-bold text-foreground mb-8">
+                Trusted Results That Speak for Themselves
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+                <div>
+                  <div className="text-3xl font-bold gradient-primary bg-clip-text text-transparent mb-2">
+                    5000+
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    Students Mentored
+                  </div>
                 </div>
-                <div className="text-sm text-muted-foreground">
-                  Students Mentored
+                <div>
+                  <div className="text-3xl font-bold gradient-primary bg-clip-text text-transparent mb-2">
+                    85%
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    Success Rate
+                  </div>
                 </div>
-              </div>
-              <div>
-                <div className="text-3xl font-bold gradient-primary bg-clip-text text-transparent mb-2">
-                  85%
+                <div>
+                  <div className="text-3xl font-bold gradient-primary bg-clip-text text-transparent mb-2">
+                    500+
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    Expert Coaches
+                  </div>
                 </div>
-                <div className="text-sm text-muted-foreground">
-                  Success Rate
-                </div>
-              </div>
-              <div>
-                <div className="text-3xl font-bold gradient-primary bg-clip-text text-transparent mb-2">
-                  500+
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  Expert Coaches
-                </div>
-              </div>
-              <div>
-                <div className="text-3xl font-bold gradient-primary bg-clip-text text-transparent mb-2">
-                  4.9★
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  Average Rating
+                <div>
+                  <div className="text-3xl font-bold gradient-primary bg-clip-text text-transparent mb-2">
+                    4.9★
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    Average Rating
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </section>
   );
